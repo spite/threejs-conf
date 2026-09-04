@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>threejs-conf</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="./css/styles.css"
+      media="screen"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="./node_modules/guspira/css/gui.css"
+      media="screen"
+    />
+    <link
+      href="https://fonts.googleapis.com/css?family=Open+Sans"
+      rel="stylesheet"
+    />
+  </head>
+  <script type="importmap">
+    {
+      "imports": {
+        "maf": "./modules/maf.js",
+        "opentype": "./node_modules/opentype.js/dist/opentype.mjs",
+        "reactive": "./node_modules/guspira/src/reactive.js",
+        "gui": "./node_modules/guspira/src/gui.js",
+        "params": "./node_modules/guspira/src/params.js",
+        "stats": "./node_modules/guspira/src/stats.js",
+        "common": "./modules/common.js",
+        "three": "./third_party/three.module.min.js",
+        "three/": "./third_party/",
+        "third_party/": "./third_party/",
+        "easings": "./modules/easings.js",
+        "shaders/": "./shaders/",
+        "modules/": "./modules/"
+      }
+    }
+  </script>
+  <script src="./third_party/ammo.wasm.js"></script>
+  <script type="module" src="./main.js"></script>
+  <body>
+    <div id="loading"><span>loading</span></div>
+    <div id="main-gui">
+      <div id="gui-container"></div>
+    </div>
+  </body>
+</html>

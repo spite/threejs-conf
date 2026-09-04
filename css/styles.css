@@ -1,0 +1,99 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  overflow: hidden;
+}
+
+.hide-ui #gui-container {
+  font-family: "Segoe UI", sans-serif;
+  font-size: 13px;
+}
+
+
+#gui-container {
+  flex: 1;
+}
+
+.hide-ui #main-gui {
+  display: none;
+}
+
+canvas {
+  position: absolute;
+  inset: 0;
+}
+
+#main-gui {
+  z-index: 10;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+#main-gui,
+#gui-container {
+  pointer-events: none;
+}
+
+#gui-container .gui {
+  pointer-events: auto;
+}
+
+@media (min-width: 950px) {
+  #main-gui {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 520px;
+  }
+}
+
+@media (max-width: 950px) {
+  #main-gui {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+    align-items: flex-end;
+
+    .gui-scroller {
+      max-height: 50vh;
+    }
+  }
+}
+
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #05040a;
+  color: #fff;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  transition: opacity 0.6s ease;
+}
+
+#loading span {
+  opacity: 0.65;
+  animation: loading-pulse 1.4s ease-in-out infinite;
+}
+
+#loading.done {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes loading-pulse {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.8; }
+}

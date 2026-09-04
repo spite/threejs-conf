@@ -1,0 +1,19 @@
+{
+  "name": "threejs-conf",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Single-sketch three.js setup, based on genuary-2026 sketch 6.",
+  "scripts": {
+    "start": "npx --yes serve .",
+    "build": "node build.mjs",
+    "deploy": "node build.mjs && npx --yes wrangler pages deploy dist --project-name=threejs-conf"
+  },
+  "dependencies": {
+    "guspira": "^0.1.1",
+    "opentype.js": "^2.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
