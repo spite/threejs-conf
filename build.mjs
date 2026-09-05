@@ -59,6 +59,7 @@ const copies = [
   "third_party/ammo.wasm.wasm",
   "assets/GoogleSansFlex-Black.ttf",
   "assets/spruit_sunrise_2k.hdr.jpg",
+  "assets/snapshot.png",
   "assets/freesound_community-thump1-108128.mp3",
   "assets/freesound_community-glass-balcony-window-thump-96702.mp3",
 ];
