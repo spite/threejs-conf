@@ -99,6 +99,8 @@ function createSound({ camera, group, letters, physics, params }) {
       doppler: params.doppler(),
       reverb: params.reverb(),
       reverbSize: params.reverbSize(),
+      drone: params.drone(),
+      droneTone: params.droneTone(),
       panningModel: params.hrtf() ? "HRTF" : "equalpower",
     });
 

@@ -294,6 +294,12 @@ function buildPanel(gui, params, actions, stats) {
   );
   gui.addSlider("Reverb", params.reverb, 0, 1, 0.01, { title: "How much room and echo there is." });
   gui.addSlider("Reverb Size", params.reverbSize, 0.3, 8, 0.1, { title: "How big that room feels." });
+  gui.addSlider("Drone", params.drone, 0, 1, 0.01,
+    { title: "A low background hum that never quite repeats. 0 turns it off." },
+  );
+  gui.addSlider("Drone Tone", params.droneTone, 0, 1, 0.01,
+    { title: "How bright the hum is. Low is a deep rumble, high lets more of it through." },
+  );
 
   gui.addTab("Debug");
   gui.addSection("View");

@@ -1,5 +1,6 @@
 const NOISE_BUFFERS = 3;
 const NOISE_SECONDS = 2;
+const DRONE_AIR_SECONDS = 11;
 const IMPACT_PANNERS = 8;
 
 function makeNoise(ctx, seconds) {
@@ -52,6 +53,23 @@ function movePanner(panner, x, y, z, now, smooth) {
   }
 }
 
+const DRONE_ROOT = 55;
+const DRONE_LFO = 0.037;
+const DRONE_PARTIALS = [
+  { ratio: 1, detune: -4, level: 1, lfo: 1, pan: 0.13, bed: true },
+  { ratio: 1.5, detune: 6, level: 0.55, lfo: Math.SQRT2, pan: 0.17, bed: true },
+  { ratio: 2.005, detune: -9, level: 0.42, lfo: Math.sqrt(3), pan: 0.23 },
+  { ratio: 3.01, detune: 5, level: 0.24, lfo: Math.sqrt(5), pan: 0.29 },
+  { ratio: 4.98, detune: -7, level: 0.15, lfo: Math.sqrt(7), pan: 0.37 },
+  { ratio: 6.02, detune: 11, level: 0.09, lfo: Math.sqrt(11), pan: 0.41 },
+  { ratio: 8.03, detune: -13, level: 0.05, lfo: Math.sqrt(17), pan: 0.43 },
+  { ratio: 12.04, detune: 9, level: 0.03, lfo: Math.sqrt(19), pan: 0.47 },
+];
+const DRONE_AIR = [
+  { rate: 1, pan: -0.6, lfo: Math.sqrt(23) },
+  { rate: 0.6180339887, pan: 0.6, lfo: Math.sqrt(29) },
+];
+
 class SketchAudio {
   constructor() {
     this.ctx = null;
@@ -80,6 +98,10 @@ class SketchAudio {
     this.hitGap = 0.09;
     this.lastHit = -1e9;
     this.lastImpulse = 0;
+
+    this.drone = 0.25;
+    this.droneTone = 1;
+    this.droneVoices = [];
 
     this.spatial = 1;
     this.doppler = 1;
@@ -248,6 +270,8 @@ class SketchAudio {
 
     this.limiter.connect(this.master);
     this.master.connect(ctx.destination);
+
+    this.startDrone();
 
     this.noise = [];
     for (let i = 0; i < NOISE_BUFFERS; i++) {
@@ -449,6 +473,17 @@ class SketchAudio {
 
     this.arm(now);
     this.setReverbSize(this.reverbSize);
+    this.droneGain.gain.setTargetAtTime(this.drone * 0.16, now, 0.5);
+    this.droneFilter.frequency.setTargetAtTime(
+      160 + this.droneTone * 340,
+      now,
+      0.5,
+    );
+    this.droneAirFilter.frequency.setTargetAtTime(
+      420 + this.droneTone * 900,
+      now,
+      0.5,
+    );
     this.wet.gain.setTargetAtTime(this.reverb * 1.6, now, smooth);
     this.dry.gain.setTargetAtTime(1 - this.reverb * 0.35, now, smooth);
 
@@ -619,7 +654,124 @@ class SketchAudio {
     this.doppler = settings.doppler;
     this.reverb = settings.reverb;
     this.reverbSize = settings.reverbSize;
+    this.drone = settings.drone;
+    this.droneTone = settings.droneTone;
     this.setPanningModel(settings.panningModel);
+  }
+
+  droneSwell(rate, depth, floor) {
+    const ctx = this.ctx;
+    const gain = ctx.createGain();
+    gain.gain.value = floor;
+
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = DRONE_LFO * rate;
+    const amount = ctx.createGain();
+    amount.gain.value = depth;
+    lfo.connect(amount);
+    amount.connect(gain.gain);
+    lfo.start();
+
+    return gain;
+  }
+
+  dronePanner(rate, width) {
+    const ctx = this.ctx;
+    const panner = ctx.createStereoPanner();
+
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = DRONE_LFO * rate;
+    const amount = ctx.createGain();
+    amount.gain.value = width;
+    lfo.connect(amount);
+    amount.connect(panner.pan);
+    lfo.start();
+
+    return panner;
+  }
+
+  startDrone() {
+    const ctx = this.ctx;
+
+    this.droneGain = ctx.createGain();
+    this.droneGain.gain.value = 0;
+    this.droneGain.connect(this.mix);
+
+    this.droneFilter = ctx.createBiquadFilter();
+    this.droneFilter.type = "lowpass";
+    this.droneFilter.frequency.value = 300;
+    this.droneFilter.Q.value = 0.6;
+    this.droneFilter.connect(this.droneGain);
+
+    this.droneAirFilter = ctx.createBiquadFilter();
+    this.droneAirFilter.type = "bandpass";
+    this.droneAirFilter.frequency.value = 700;
+    this.droneAirFilter.Q.value = 0.9;
+    this.droneAirFilter.connect(this.droneGain);
+
+    const bed = this.droneSwell(0.31, 0.4, 0.6);
+    const body = this.droneSwell(0.53 * Math.SQRT2, 0.5, 0.5);
+    const air = this.droneSwell(0.47 * Math.sqrt(3), 0.55, 0.4);
+    bed.connect(this.droneFilter);
+    body.connect(this.droneFilter);
+    air.connect(this.droneAirFilter);
+
+    for (const partial of DRONE_PARTIALS) {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.value = DRONE_ROOT * partial.ratio;
+      osc.detune.value = partial.detune;
+
+      const gain = ctx.createGain();
+      gain.gain.value = partial.level * 0.5;
+
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = DRONE_LFO * partial.lfo;
+      const depth = ctx.createGain();
+      depth.gain.value = partial.level * 0.45;
+      lfo.connect(depth);
+      depth.connect(gain.gain);
+
+      const panner = this.dronePanner(partial.pan, partial.bed ? 0.3 : 0.8);
+      osc.connect(gain);
+      gain.connect(panner);
+      panner.connect(partial.bed ? bed : body);
+      osc.start();
+      lfo.start();
+
+      this.droneVoices.push({ osc, lfo });
+    }
+
+    const buffer = makeNoise(ctx, DRONE_AIR_SECONDS);
+    for (const layer of DRONE_AIR) {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.playbackRate.value = layer.rate;
+
+      const panner = this.dronePanner(layer.lfo, 0.5);
+      panner.pan.value = layer.pan;
+      source.connect(panner);
+      panner.connect(air);
+      source.start(ctx.currentTime, Math.random() * DRONE_AIR_SECONDS);
+      this.droneVoices.push({ source });
+    }
+
+    const sweep = ctx.createOscillator();
+    sweep.frequency.value = DRONE_LFO * Math.sqrt(13);
+    const sweepDepth = ctx.createGain();
+    sweepDepth.gain.value = 120;
+    sweep.connect(sweepDepth);
+    sweepDepth.connect(this.droneFilter.frequency);
+    sweep.start();
+
+    const airSweep = ctx.createOscillator();
+    airSweep.frequency.value = DRONE_LFO * Math.sqrt(31);
+    const airDepth = ctx.createGain();
+    airDepth.gain.value = 260;
+    airSweep.connect(airDepth);
+    airDepth.connect(this.droneAirFilter.frequency);
+    airSweep.start();
   }
 
   setPanningModel(model) {

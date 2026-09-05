@@ -70,6 +70,8 @@ const defaults = {
   hrtf: false,
   reverb: 0.5,
   reverbSize: 3.5,
+  drone: 0.25,
+  droneTone: 1,
   impactDecay: 0.7,
   impactPitch: 1.6,
   massVariation: 0.6,
