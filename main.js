@@ -1,5 +1,6 @@
 import {
   isEditing,
+  setMaxPixelRatio,
   renderer,
   camera,
   controls,
@@ -633,6 +634,7 @@ function updateSceneAndPost(dt) {
   ao.pointShadowRays.value = Math.round(params.cursorShadowRays());
   ao.backgroundSky.value.copy(skyColor);
   ao.backgroundGround.value.copy(groundColor);
+  setMaxPixelRatio(params.pixelRatio());
   ao.fogDensity.value = params.fogDensity();
   ao.radius.value = params.aoRadius();
   ao.strength.value = params.aoStrength();

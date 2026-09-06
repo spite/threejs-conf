@@ -11,6 +11,7 @@ const defaults = {
   roughness: 0.65,
   metalness: 0.44,
   resolution: 72,
+  pixelRatio: 2,
   line1: "THREE.JS",
   line2: "CONF",
   lineSpacing: 1.15,
@@ -118,21 +119,25 @@ const defaults = {
 
 const QUALITY = {
   low: {
+    pixelRatio: 1,
     resolution: 48, curveSteps: 4, normalSmooth: 0,
     cursorShadow: 0, cursorShadowRays: 1, cursorShadowSteps: 6,
     shutter: 0, blurSamples: 4, bloom: 0, chromatic: 0, hrtf: false,
   },
   medium: {
+    pixelRatio: 1.5,
     resolution: 56, curveSteps: 6, normalSmooth: 0.5,
     cursorShadow: 1, cursorShadowRays: 3, cursorShadowSteps: 8,
     shutter: 0.5, blurSamples: 8, bloom: 0.4, chromatic: 0, hrtf: false,
   },
   high: {
+    pixelRatio: 2,
     resolution: 72, curveSteps: 10, normalSmooth: 0.5,
     cursorShadow: 1, cursorShadowRays: 5, cursorShadowSteps: 12,
     shutter: 0.5, blurSamples: 16, bloom: 0.4, chromatic: 12, hrtf: false,
   },
   ultra: {
+    pixelRatio: 2,
     resolution: 128, curveSteps: 14, normalSmooth: 0.5,
     cursorShadow: 1, cursorShadowRays: 8, cursorShadowSteps: 20,
     shutter: 0.5, blurSamples: 32, bloom: 0.5, chromatic: 12, hrtf: true,

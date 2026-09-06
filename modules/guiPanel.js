@@ -181,6 +181,9 @@ function buildPanel(gui, params, actions, stats) {
   gui.addCheckbox("Wireframe", params.wireframe,
     { title: "Shows the underlying triangles instead of the solid surface." },
   );
+  gui.addSlider("Pixel Ratio", params.pixelRatio, 0.5, 3, 0.05,
+    { title: "How many device pixels are rendered per screen pixel. The single biggest cost on high-density screens: 2 is four times the work of 1." },
+  );
   gui.addSection("Occlusion");
   gui.addSlider("AO Radius", params.aoRadius, 0, 80, 1, { title: "How far the soft corner shading reaches." });
   gui.addSlider("AO Strength", params.aoStrength, 0, 3, 0.01,

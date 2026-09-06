@@ -20,12 +20,14 @@ const initialFov = 35;
 const cameras = [];
 const resizeFns = [];
 
+let MAX_PIXEL_RATIO = 2;
+
 function getWebGLRenderer() {
   const renderer = new WebGLRenderer({
     alpha: true,
     preserveDrawingBuffer: true,
   });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -53,6 +55,14 @@ function getCamera(fov) {
 window.addEventListener("resize", () => {
   resize();
 });
+
+function setMaxPixelRatio(value) {
+  const next = Math.max(value, 0.5);
+  if (next === MAX_PIXEL_RATIO) return;
+  MAX_PIXEL_RATIO = next;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, next));
+  resize();
+}
 
 function onResize(fn) {
   resizeFns.push(fn);
@@ -141,6 +151,7 @@ const clock = new Clock();
 
 export {
   isEditing,
+  setMaxPixelRatio,
   onResize,
   renderer,
   camera,
