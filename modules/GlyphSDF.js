@@ -337,10 +337,12 @@ class GlyphProfile {
             my = jm;
           }
         }
-        out[0] = bestMiter;
-        out[1] = mx;
-        out[2] = my;
-        return out;
+        if (bestMiter < 0 && (mx * bx + my * by) < 0) {
+          out[0] = sign * dist;
+          out[1] = mx;
+          out[2] = my;
+          return out;
+        }
       }
     }
 
