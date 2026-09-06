@@ -21,6 +21,7 @@ import {
   Color,
   Vector2,
   Vector3,
+  Quaternion,
   Plane,
   Raycaster,
   Group,
@@ -169,6 +170,9 @@ camera.layers.enable(NO_SHADOW_LAYER);
 scene.add(cursorBall);
 
 const BALL_SIZE = 0.06;
+const lightProxy = { position: new Vector3(), quaternion: new Quaternion() };
+const lightTarget = new Vector3();
+let lightEntry = null;
 const PULSE_STIFFNESS = 180;
 const PULSE_DAMPING = 14;
 const PULSE_STEP = 1 / 240;
@@ -323,8 +327,9 @@ function randomize() {
   blendFactor.reset(0);
   blendFactor.set(1);
   params.seed.set(Maf.intRandomInRange(0, 1e6));
-  params.stamps.set(Maf.intRandomInRange(800, 3000));
-  params.scale.set(Maf.randomInRange(0.8, 1.2));
+  params.stampDensity.set(Maf.randomInRange(0.3, 1.6));
+  const low = Maf.randomInRange(0.15, 0.6);
+  params.stampSize.set([low, low + Maf.randomInRange(0.2, 0.9)]);
 }
 
 const pointer = new Vector2();
@@ -337,6 +342,7 @@ let pointerDown = false;
 let pointerOver = false;
 let pointerOnUI = false;
 let shiftDown = false;
+let altDown = false;
 const canvas = renderer.domElement;
 
 function fromScene(e) {
@@ -384,7 +390,7 @@ window.addEventListener("pointerup", () => {
     return;
   }
 
-  if (pointerDown && running && params.physics() && pointerWorld()) {
+  if (pointerDown && running && !altDown && params.physics() && pointerWorld()) {
     pushDir.copy(raycaster.ray.direction);
     clickCharge += 1;
     physics.burst(
@@ -405,20 +411,25 @@ window.addEventListener("pointerleave", () => {
 });
 
 window.addEventListener("keydown", (e) => {
-  if (e.key === "Shift" && !isEditing(e.target)) shiftDown = true;
+  if (isEditing(e.target)) return;
+  if (e.key === "Shift") shiftDown = true;
+  if (e.key === "Alt") altDown = true;
 });
 
 window.addEventListener("keyup", (e) => {
   if (e.key === "Shift") shiftDown = false;
+  if (e.key === "Alt") altDown = false;
 });
 
 window.addEventListener("blur", () => {
   shiftDown = false;
+  altDown = false;
 });
 
 document.addEventListener("visibilitychange", () => {
   audio.setActive(!document.hidden);
   shiftDown = false;
+  altDown = false;
 });
 
 window.addEventListener("pointercancel", () => {
@@ -440,12 +451,39 @@ function applyHover(dt) {
 
 renderer.info.autoReset = false;
 
+function syncLightBody() {
+  const wanted =
+    params.lightPhysics() &&
+    params.cursorLight() &&
+    params.physics() &&
+    running;
+
+  if (!wanted) {
+    if (lightEntry) {
+      physics.remove(lightEntry);
+      lightEntry = null;
+    }
+    return;
+  }
+
+  if (lightEntry && physics.bodies.includes(lightEntry)) return;
+
+  lightProxy.position
+    .copy(cursorLight.position)
+    .sub(group.position)
+    .multiplyScalar(1 / (group.scale.x || 1));
+  const shape = physics.makeSphere(BALL_SIZE / (group.scale.x || 1));
+  lightEntry = physics.addBody(lightProxy, shape, params.lightMass(), true);
+}
+
 function stepPhysics(dt) {
+  syncLightBody();
+
   if (params.physics() && running) {
     text.syncMasses(params.massVariation());
 
-    const gathering = shiftDown && pointerOver;
-    const holding = (pointerDown && !pointerOnUI) || gathering;
+    const gathering = shiftDown && pointerOver && !altDown;
+    const holding = ((pointerDown && !pointerOnUI) || gathering) && !altDown;
     physics.configure({
       homeStrength: holding ? 0 : params.returnHome(),
       homeTorque: params.returnSpin(),
@@ -460,9 +498,19 @@ function stepPhysics(dt) {
         .sub(group.position)
         .multiplyScalar(1 / (group.scale.x || 1));
       physics.pull(pullPoint, params.holdPull(), params.holdRadius());
-    } else if (pointerOver) {
+    } else if (pointerOver && !altDown) {
       applyHover(dt);
     }
+    if (lightEntry) physics.setMass(lightEntry, params.lightMass());
+    if (lightEntry && pointerWorld()) {
+      lightTarget
+        .copy(pointerScenePoint)
+        .addScaledVector(raycaster.ray.direction, -params.cursorLightOffset())
+        .sub(group.position)
+        .multiplyScalar(1 / (group.scale.x || 1));
+      physics.drive(lightEntry, lightTarget, params.lightFollow());
+    }
+
     statPhysics.start();
     physics.step(dt);
     statPhysics.end();
@@ -555,7 +603,12 @@ function updateSceneAndPost(dt) {
     : 0;
   cursorLight.distance = params.cursorLightRange();
   cursorLight.color.set(params.cursorLightColor());
-  if (lightOn && pointerWorld()) {
+  if (lightEntry) {
+    cursorLight.position
+      .copy(lightProxy.position)
+      .multiplyScalar(group.scale.x || 1)
+      .add(group.position);
+  } else if (lightOn && pointerWorld()) {
     cursorLight.position
       .copy(pointerScenePoint)
       .addScaledVector(raycaster.ray.direction, -params.cursorLightOffset());
@@ -597,6 +650,7 @@ function updateSceneAndPost(dt) {
   ssao.aberrationShader.uniforms.aberration.value = params.chromatic();
   mb.vignette.value = params.vignette();
   mb.dither.value = params.dither();
+  ssao.fxaaShader.uniforms.fxaa.value = params.fxaa();
 
   const view = debugViewIndex.get(params.debugView()) ?? 0;
   ao.debugView.value = view;

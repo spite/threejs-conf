@@ -1,6 +1,11 @@
 import { effect } from "reactive";
 
 function coerceParam(raw, fallback) {
+  if (Array.isArray(fallback)) {
+    const parts = raw.split(",").map(Number);
+    if (parts.length !== fallback.length) return undefined;
+    return parts.some((v) => !Number.isFinite(v)) ? undefined : parts;
+  }
   if (typeof fallback === "number") {
     const v = parseFloat(raw);
     return Number.isFinite(v) ? v : undefined;

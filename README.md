@@ -42,6 +42,8 @@ all generated live and positioned in 3D, so they pan and pitch-shift as things m
 - **Move** the mouse to nudge the letters
 - **Hold** to gather them onto the light, **release** to throw them
 - **Shift** gathers them without clicking
+- **Alt** lets you orbit without disturbing them
+- **F** goes fullscreen
 - **Space** pauses, **Tab** hides the panel
 
 The panel has a Quality row (Low to Ultra) if it runs hot, and everything else is

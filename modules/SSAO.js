@@ -18,6 +18,7 @@ import { shader as depthFs } from "shaders/shadowFs.js";
 import { shader as ssaoFs } from "shaders/composite.js";
 import { shader as blurFs } from "shaders/final.js";
 import { shader as aberrationFs } from "shaders/aberration.js";
+import { shader as fxaaFs } from "shaders/fxaa.js";
 import { getFBO } from "modules/fbo.js";
 import { shader as orthoVs } from "shaders/ortho.js";
 
@@ -150,6 +151,17 @@ class SSAO {
       glslVersion: GLSL3,
     });
     this.blurPass = new ShaderPass(this.blurShader);
+
+    this.fxaaShader = new RawShaderMaterial({
+      uniforms: {
+        inputTexture: { value: this.blurPass.texture },
+        fxaa: { value: 1 },
+      },
+      vertexShader: orthoVs,
+      fragmentShader: fxaaFs,
+      glslVersion: GLSL3,
+    });
+    this.fxaaPass = new ShaderPass(this.fxaaShader);
   }
 
   setLight(x, y, z) {
@@ -204,8 +216,10 @@ class SSAO {
     this.pass.setSize(w, h);
     this.aberrationPass.setSize(w, h);
     this.blurPass.setSize(w, h);
+    this.fxaaPass.setSize(w, h);
     this.bloom.setSize(w, h);
     this.aberrationShader.uniforms.inputTexture.value = this.pass.texture;
+    this.fxaaShader.uniforms.inputTexture.value = this.blurPass.texture;
     this.aberrationShader.uniforms.resolution.value.set(width, height);
   }
 
@@ -248,7 +262,13 @@ class SSAO {
     }
 
     u.sceneMap.value = scene2d;
-    this.blurPass.render(renderer, true);
+
+    if (this.fxaaShader.uniforms.fxaa.value > 0) {
+      this.blurPass.render(renderer);
+      this.fxaaPass.render(renderer, true);
+    } else {
+      this.blurPass.render(renderer, true);
+    }
   }
 
   dispose() {

@@ -146,8 +146,8 @@ function createLetters(ctx) {
   effectRAF(() => {
     revision();
     const stampOptions = {
-      stamps: params.stamps(),
-      scale: params.scale(),
+      density: params.stampDensity(),
+      size: params.stampSize(),
       opacity: params.stampOpacity(),
     };
     const seed = Math.round(params.seed());

@@ -14,6 +14,12 @@ import { GlyphProfile } from "modules/GlyphSDF.js";
 const SDF_SIZE = 64;
 const SDF_PAD = 1.3;
 const SDF_RANGE = 0.25;
+const POISSON_PACKING = 0.6136;
+const POISSON_TRIES = 20;
+const poissonCache = new Map();
+const STAMPS_PER_AREA = 4630 / (512 * 512);
+const DENSITY_STEP = 256;
+const DENSITY_MAX = 16384;
 const sdfCache = new WeakMap();
 
 function makeRandom(seed) {
@@ -72,6 +78,84 @@ function glyphSDF(font, char) {
   return entry;
 }
 
+function poissonDisk(size, count, rng) {
+  const radius = size * Math.sqrt(POISSON_PACKING / Math.max(count, 1));
+  const cell = radius / Math.SQRT2;
+  const cols = Math.max(1, Math.ceil(size / cell));
+  const grid = new Int32Array(cols * cols).fill(-1);
+  const points = [];
+  const active = [];
+
+  const wrap = (v) => ((v % size) + size) % size;
+  const at = (cx, cy) => grid[((cy % cols) + cols) % cols * cols + (((cx % cols) + cols) % cols)];
+
+  const fits = (x, y) => {
+    const cx = Math.floor(x / cell);
+    const cy = Math.floor(y / cell);
+    for (let j = -2; j <= 2; j++) {
+      for (let i = -2; i <= 2; i++) {
+        const k = at(cx + i, cy + j);
+        if (k < 0) continue;
+        let dx = Math.abs(points[k * 2] - x);
+        let dy = Math.abs(points[k * 2 + 1] - y);
+        if (dx > size * 0.5) dx = size - dx;
+        if (dy > size * 0.5) dy = size - dy;
+        if (dx * dx + dy * dy < radius * radius) return false;
+      }
+    }
+    return true;
+  };
+
+  const add = (x, y) => {
+    const index = points.length / 2;
+    points.push(x, y);
+    active.push(index);
+    grid[Math.floor(y / cell) * cols + Math.floor(x / cell)] = index;
+  };
+
+  add(rng() * size, rng() * size);
+
+  while (active.length) {
+    const pick = Math.floor(rng() * active.length);
+    const index = active[pick];
+    let placed = false;
+
+    for (let tries = 0; tries < POISSON_TRIES; tries++) {
+      const angle = rng() * Maf.TAU;
+      const dist = radius * (1 + rng());
+      const x = wrap(points[index * 2] + Math.cos(angle) * dist);
+      const y = wrap(points[index * 2 + 1] + Math.sin(angle) * dist);
+      if (!fits(x, y)) continue;
+      add(x, y);
+      placed = true;
+      break;
+    }
+
+    if (!placed) {
+      active[pick] = active[active.length - 1];
+      active.pop();
+    }
+  }
+
+  return points;
+}
+
+function stampCount(size, density) {
+  const raw = density * size * size * STAMPS_PER_AREA;
+  const stepped = Math.round(raw / DENSITY_STEP) * DENSITY_STEP;
+  return Math.min(stepped, DENSITY_MAX);
+}
+
+function poissonPoints(size, count) {
+  const key = `${size}:${count}`;
+  let points = poissonCache.get(key);
+  if (!points) {
+    points = poissonDisk(size, count, makeRandom(0x9e3779b1));
+    poissonCache.set(key, points);
+  }
+  return points;
+}
+
 function stampInstances(glyph, seed, size, options, out) {
   if (glyph.empty) return 0;
 
@@ -80,11 +164,25 @@ function stampInstances(glyph, seed, size, options, out) {
   const unit = (size / 16) * glyph.unitCap;
   let n = 0;
 
-  for (let i = 0; i < options.stamps; i++) {
-    const posX = range(0, size);
-    const posY = range(0, size);
+  const spots = poissonPoints(size, stampCount(size, options.density));
+  const offsetX = rng() * size;
+  const offsetY = rng() * size;
+  const symmetry = Math.floor(rng() * 8);
+
+  for (let i = 0; i < spots.length / 2; i++) {
+    let sx = spots[i * 2];
+    let sy = spots[i * 2 + 1];
+    if (symmetry & 1) sx = size - sx;
+    if (symmetry & 2) sy = size - sy;
+    if (symmetry & 4) {
+      const swap = sx;
+      sx = sy;
+      sy = swap;
+    }
+    const posX = (sx + offsetX) % size;
+    const posY = (sy + offsetY) % size;
     const rot = range(0, Maf.TAU);
-    const s = range(0.4, 1) * options.scale;
+    const s = range(options.size[0], options.size[1]);
     const side = 2 * glyph.extent * unit * s;
     const radius = 0.5 * side;
     const alpha = range(0.15, 0.6) * options.opacity;

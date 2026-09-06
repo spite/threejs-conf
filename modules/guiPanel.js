@@ -23,6 +23,8 @@ function buildPanel(gui, params, actions, stats) {
     "<br><b>Move</b> the mouse to nudge the letters." +
     "<br><b>Hold</b> to gather them onto the light, <b>release</b> to throw them." +
     "<br><b>Shift</b> gathers them without clicking." +
+    "<br><b>Alt</b> lets you orbit without disturbing them." +
+    "<br><b>F</b> goes fullscreen." +
     "<br><b>Space</b> pauses, <b>Tab</b> hides this panel.",
   );
 
@@ -74,10 +76,12 @@ function buildPanel(gui, params, actions, stats) {
   gui.addSlider("Lightness", params.lightness, 0.1, 0.9, 0.01, { title: "How light or dark the letters are." });
   gui.addButton("Random", actions.randomize, { title: "Picks a new colour and a new pattern." });
   gui.addSection("Stamps");
-  gui.addSlider("Stamps", params.stamps, 0, 6000, 10,
-    { title: "How many little letter shapes are scattered over the surface. 0 leaves it plain." },
+  gui.addSlider("Stamp Density", params.stampDensity, 0, 3, 0.01,
+    { title: "How many little letters are scattered over each patch of surface. Changing their size does not change how many there are." },
   );
-  gui.addSlider("Stamp Size", params.scale, 0.1, 3, 0.01, { title: "How big each scattered letter is." });
+  gui.addRangeSlider("Stamp Size", params.stampSize, 0.05, 2, 0.01,
+    { title: "The smallest and largest a scattered letter can be. Drag the ends together for one uniform size, apart for a jumble." },
+  );
   gui.addSlider("Stamp Roughness", params.stampRoughness, -1, 1, 0.01,
     { title: "How much the pattern varies the surface finish. 0 leaves it even, positive makes the raised stamps matte, negative makes them the shiny part instead." },
   );
@@ -145,6 +149,15 @@ function buildPanel(gui, params, actions, stats) {
   gui.addSlider("Light Distance", params.cursorLightOffset, 0, 3, 0.01,
     { title: "How far the light floats in front of the letters. At 0 it sits inside them and cannot light or shadow their faces at all." },
   );
+  gui.addCheckbox("Light Is Physical", params.lightPhysics,
+    { title: "Turns the light sphere into a real object: it collides with the letters and shoves them out of the way instead of passing through." },
+  );
+  gui.addSlider("Light Mass", params.lightMass, 0.05, 3, 0.01,
+    { title: "How heavy the physical light sphere is. Heavier barges through, lighter gets deflected." },
+  );
+  gui.addSlider("Light Follow", params.lightFollow, 5, 200, 1,
+    { title: "How hard the physical sphere chases the cursor. Low values let it lag and swing behind." },
+  );
   gui.addColor("Light Colour", params.cursorLightColor, { title: "Colour of the cursor light." });
   gui.addSlider("Light Shadows", params.cursorShadow, 0, 1, 0.01,
     { title: "How dark the shadows the cursor light throws are, on the same scale as Shadow Strength so both lights match. 0 turns them off." },
@@ -195,6 +208,9 @@ function buildPanel(gui, params, actions, stats) {
   gui.addSlider("Vignette", params.vignette, 0, 1, 0.01, { title: "Darkens the corners. 0 turns it off." });
   gui.addSlider("Dither", params.dither, 0, 3, 0.05,
     { title: "Breaks up the banding rings in smooth gradients with a touch of noise. 0 turns it off." },
+  );
+  gui.addSlider("Antialias", params.fxaa, 0, 1, 0.01,
+    { title: "Smooths the stair-stepping along letter edges. 0 turns it off, 1 is full strength." },
   );
   gui.addSlider("Chromatic", params.chromatic, 0, 80, 1,
     { title: "Spreads the image across the spectrum towards the edges of the frame, in pixels. 0 turns it off." },

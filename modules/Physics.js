@@ -61,7 +61,35 @@ class Physics {
     return compound;
   }
 
-  addBody(object, shape, mass) {
+  makeSphere(radius) {
+    return new this.ammo.btSphereShape(radius);
+  }
+
+  drive(entry, target, strength) {
+    const kp = strength;
+    const kd = 2 * Math.sqrt(kp);
+
+    entry.body.getMotionState().getWorldTransform(this.transform);
+    const o = this.transform.getOrigin();
+    const v = entry.body.getLinearVelocity();
+
+    entry.body.activate();
+    this.vec.setValue(
+      entry.mass * ((target.x - o.x()) * kp - v.x() * kd),
+      entry.mass * ((target.y - o.y()) * kp - v.y() * kd),
+      entry.mass * ((target.z - o.z()) * kp - v.z() * kd),
+    );
+    entry.body.applyCentralForce(this.vec);
+  }
+
+  remove(entry) {
+    const at = this.bodies.indexOf(entry);
+    if (at < 0) return;
+    this.world.removeRigidBody(entry.body);
+    this.bodies.splice(at, 1);
+  }
+
+  addBody(object, shape, mass, driven = false) {
     const ammo = this.ammo;
     const inertia = new ammo.btVector3(0, 0, 0);
     if (mass > 0) shape.calculateLocalInertia(mass, inertia);
@@ -94,7 +122,7 @@ class Physics {
     body.setActivationState(4);
 
     this.world.addRigidBody(body);
-    this.bodies.push({
+    const entry = {
       body,
       object,
       motionState,
@@ -112,10 +140,12 @@ class Physics {
         y: object.position.y,
         z: object.position.z,
       },
-    });
+      driven,
+    };
+    this.bodies.push(entry);
 
     ammo.destroy(info);
-    return body;
+    return entry;
   }
 
   applyForces() {
@@ -134,6 +164,8 @@ class Physics {
     }
 
     for (const entry of this.bodies) {
+      if (entry.driven) continue;
+
       entry.body.getMotionState().getWorldTransform(this.transform);
       const o = this.transform.getOrigin();
       const x = o.x();
@@ -258,26 +290,25 @@ class Physics {
     });
   }
 
+  setMass(entry, value) {
+    const mass = Math.max(value, 1e-3);
+    if (Math.abs(mass - entry.mass) < 1e-6) return;
+
+    const inertia = new this.ammo.btVector3(0, 0, 0);
+    entry.shape.calculateLocalInertia(mass, inertia);
+    entry.body.setMassProps(mass, inertia);
+    entry.body.updateInertiaTensor();
+    entry.body.activate();
+
+    entry.mass = mass;
+    entry.inertia = (inertia.x() + inertia.y() + inertia.z()) / 3;
+    this.ammo.destroy(inertia);
+  }
+
   setMasses(masses) {
-    const ammo = this.ammo;
-    const inertia = new ammo.btVector3(0, 0, 0);
-
-    for (let i = 0; i < this.bodies.length; i++) {
-      const entry = this.bodies[i];
-      const mass = Math.max(masses[i] ?? 1, 1e-3);
-      if (Math.abs(mass - entry.mass) < 1e-6) continue;
-
-      inertia.setValue(0, 0, 0);
-      entry.shape.calculateLocalInertia(mass, inertia);
-      entry.body.setMassProps(mass, inertia);
-      entry.body.updateInertiaTensor();
-      entry.body.activate();
-
-      entry.mass = mass;
-      entry.inertia = (inertia.x() + inertia.y() + inertia.z()) / 3;
+    for (let i = 0; i < masses.length && i < this.bodies.length; i++) {
+      this.setMass(this.bodies[i], masses[i]);
     }
-
-    ammo.destroy(inertia);
   }
 
   pull(origin, strength, radius) {

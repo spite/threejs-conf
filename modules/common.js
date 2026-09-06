@@ -22,7 +22,6 @@ const resizeFns = [];
 
 function getWebGLRenderer() {
   const renderer = new WebGLRenderer({
-    antialias: true,
     alpha: true,
     preserveDrawingBuffer: true,
   });
@@ -108,6 +107,13 @@ function isEditing(target) {
   );
 }
 
+function toggleFullscreen() {
+  const target = document.fullscreenElement
+    ? document.exitFullscreen()
+    : document.documentElement.requestFullscreen();
+  target?.catch((e) => console.warn("fullscreen refused", e));
+}
+
 window.addEventListener("keydown", (e) => {
   if (isEditing(e.target)) return;
 
@@ -117,6 +123,9 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Tab") {
     document.body.classList.toggle("hide-ui");
     e.preventDefault();
+  }
+  if (e.code === "KeyF") {
+    toggleFullscreen();
   }
 });
 
