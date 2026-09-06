@@ -108,6 +108,7 @@ const statGeometries = counter("geometries");
 const statTextures = counter("textures");
 const statPrograms = counter("programs");
 const statBuild = counter("build");
+const statAttract = counter("attract");
 
 const statBodies = counter("bodies");
 const statAwake = counter("awake");
@@ -251,6 +252,7 @@ const shadowCenter = new Vector3();
 const pointerScenePoint = new Vector3();
 const pullPoint = new Vector3();
 
+const MAX_CLICK_CHARGE = 4;
 let clickCharge = 0;
 
 function fitShadow() {
@@ -405,6 +407,7 @@ function stepAttract(dt) {
   if (after <= 0 || !running) {
     if (attracting) attracting = false;
     controls.autoRotate = false;
+    statAttract.sample(running ? -1 : -2);
     return;
   }
 
@@ -413,6 +416,8 @@ function stepAttract(dt) {
     attracting = true;
     burstTimer = 0;
   }
+
+  statAttract.sample(attracting ? 0 : Math.max(after - idleTime, 0));
 
   controls.autoRotate = attracting;
   controls.autoRotateSpeed = params.attractSpin();
@@ -483,7 +488,7 @@ window.addEventListener("pointerup", () => {
 
   if (pointerDown && running && !altDown && params.physics() && pointerWorld()) {
     pushDir.copy(raycaster.ray.direction);
-    clickCharge += 1;
+    clickCharge = Math.min(clickCharge + 1, MAX_CLICK_CHARGE);
     physics.burst(
       pushPoint,
       pushDir,
@@ -760,7 +765,7 @@ render(() => {
   const dt = Math.min(clock.getDelta(), MAX_DT);
   controls.update(dt);
   if (running) {
-    clickCharge = Math.max(0, clickCharge - dt / params.buildupDecay());
+    clickCharge *= Math.exp(-dt / params.buildupDecay());
   }
 
   stepAttract(dt);

@@ -62,6 +62,8 @@ function presetPicker(gui, label, table, labels, params, apply, options) {
 const fmtInt = (v) => Math.round(v).toLocaleString();
 const fmtMs = (v) => `${v.toFixed(1)} ms`;
 const fmt3 = (v) => v.toFixed(3);
+const fmtAttract = (v) =>
+  v === -2 ? "paused" : v === -1 ? "off" : v === 0 ? "playing" : `${v.toFixed(1)} s`;
 
 function buildPanel(gui, params, actions, stats) {
   gui.addButtons("Settings", [
@@ -102,6 +104,9 @@ function buildPanel(gui, params, actions, stats) {
   gui.addSlider("Throw Every", params.attractBurst, 0, 20, 0.5,
     { title: "Roughly how many seconds between the throws it fires on its own. 0 leaves the letters alone and only spins the camera." },
   );
+  gui.addMonitor("Takes Over In", stats.attract, { format: fmtAttract,
+    title: "Counts down while you are still. Reads playing once it has taken over, and resets the moment you touch anything.",
+  });
 
   gui.addTab("Text");
   gui.addButton("Regenerate", actions.regenerate,
@@ -360,7 +365,9 @@ function buildPanel(gui, params, actions, stats) {
   gui.addSlider("Click Buildup", params.clickBuildup, 0, 2, 0.01,
     { title: "How much clicking again straight away hits harder." },
   );
-  gui.addSlider("Buildup Decay", params.buildupDecay, 0.2, 6, 0.05, { title: "How quickly that build-up wears off." });
+  gui.addSlider("Buildup Decay", params.buildupDecay, 0.2, 6, 0.05,
+    { title: "How long the extra force lingers, in seconds. Higher keeps it around longer; the build-up tops out at four clicks either way." },
+  );
   gui.addSection("Clustering", { open: false });
   gui.addSlider("Cluster Pull", params.cluster, 0, 5, 0.01,
     { title: "How much flying letters bunch together in the middle." },
