@@ -27,6 +27,7 @@ function makeLetterMaterial(camera, color = 0xffffff) {
       roughnessMap: null,
       hasRoughnessMap: false,
       roughnessScale: 1,
+      specularAA: 1,
     },
     customUniforms: {
       texScale: { value: 1 },

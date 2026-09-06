@@ -1,17 +1,69 @@
+import { signal, effect, untrack } from "reactive";
 import { DEBUG_VIEWS } from "modules/debugViews.js";
+import { LOOKS, FEELS } from "modules/defaults.js";
 
+
+const LOOK_LABELS = {
+  sunrise: "Sunrise",
+  noir: "Noir",
+  neon: "Neon",
+  mellow: "Mellow",
+  candy: "Candy",
+  chrome: "Chrome",
+  clay: "Clay",
+  moss: "Moss",
+  autumn: "Autumn",
+};
+
+const FEEL_LABELS = {
+  settled: "Settled",
+  rubber: "Rubber",
+  syrup: "Syrup",
+  zippy: "Zippy",
+  swarm: "Swarm",
+  stiff: "Stiff",
+};
+
+const sameValue = (a, b) =>
+  Array.isArray(a)
+    ? Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i])
+    : a === b;
+
+function matchingPreset(table, params) {
+  for (const [name, preset] of Object.entries(table)) {
+    let hit = true;
+    for (const [key, value] of Object.entries(preset)) {
+      if (!sameValue(value, params[key].peek())) {
+        hit = false;
+        break;
+      }
+    }
+    if (hit) return name;
+  }
+  return "";
+}
+
+function presetPicker(gui, label, table, labels, params, apply, options) {
+  const keys = Object.keys(Object.values(table)[0]);
+  const choice = signal("");
+  const list = [["", "Custom"], ...Object.keys(table).map((n) => [n, labels[n]])];
+
+  gui.addSelect(label, choice, list, {
+    ...options,
+    onChange: (name) => name && apply(name),
+  });
+
+  effect(() => {
+    for (const key of keys) params[key]();
+    untrack(() => choice.set(matchingPreset(table, params)));
+  });
+}
 
 const fmtInt = (v) => Math.round(v).toLocaleString();
 const fmtMs = (v) => `${v.toFixed(1)} ms`;
 const fmt3 = (v) => v.toFixed(3);
 
 function buildPanel(gui, params, actions, stats) {
-  gui.addButtons("Quality", [
-    { label: "Low", onClick: () => actions.applyQuality("low"), title: "Cheapest: no bloom, no motion blur, no aberration, flat cursor shadows" },
-    { label: "Medium", onClick: () => actions.applyQuality("medium"), title: "Bloom and motion blur on, softer cursor shadows, no aberration" },
-    { label: "High", onClick: () => actions.applyQuality("high"), title: "Everything on at sensible detail" },
-    { label: "Ultra", onClick: () => actions.applyQuality("ultra"), title: "Maximum detail and sample counts. Expect a long rebuild" },
-  ]);
   gui.addButtons("Settings", [
     { label: "Reset All", onClick: actions.resetParams, title: "Back to defaults" },
     { label: "Copy Link", onClick: actions.copyStateLink, title: "Link to this state" },
@@ -26,6 +78,29 @@ function buildPanel(gui, params, actions, stats) {
     "<br><b>Alt</b> lets you orbit without disturbing them." +
     "<br><b>F</b> goes fullscreen." +
     "<br><b>Space</b> pauses, <b>Tab</b> hides this panel.",
+  );
+  gui.addSection("Presets");
+  gui.addButtons("Quality", [
+    { label: "Low", onClick: () => actions.applyQuality("low"), title: "Cheapest: no bloom, no motion blur, no aberration, flat cursor shadows" },
+    { label: "Medium", onClick: () => actions.applyQuality("medium"), title: "Bloom and motion blur on, softer cursor shadows, no aberration" },
+    { label: "High", onClick: () => actions.applyQuality("high"), title: "Everything on at sensible detail" },
+    { label: "Ultra", onClick: () => actions.applyQuality("ultra"), title: "Maximum detail and sample counts. Expect a long rebuild" },
+  ]);
+  presetPicker(gui, "Look", LOOKS, LOOK_LABELS, params, actions.applyLook,
+    { title: "Whole-scene looks: colour, material, lights and the post chain. Shows Custom once you change any of them." },
+  );
+  presetPicker(gui, "Feel", FEELS, FEEL_LABELS, params, actions.applyFeel,
+    { title: "How the letters move: springs, drag, bounce and how clicks throw them. Shows Custom once you change any of them." },
+  );
+  gui.addSection("Attract Mode", { open: false });
+  gui.addSlider("Starts After", params.attract, 0, 120, 1,
+    { title: "Seconds of no mouse or keyboard before the piece starts playing by itself, so it is never sitting dead on an unattended screen. 0 turns it off. Any input stops it at once." },
+  );
+  gui.addSlider("Camera Drift", params.attractSpin, 0, 4, 0.05,
+    { title: "How fast the camera drifts around while it is playing by itself. 0 leaves the camera still." },
+  );
+  gui.addSlider("Throw Every", params.attractBurst, 0, 20, 0.5,
+    { title: "Roughly how many seconds between the throws it fires on its own. 0 leaves the letters alone and only spins the camera." },
   );
 
   gui.addTab("Text");
@@ -146,7 +221,7 @@ function buildPanel(gui, params, actions, stats) {
   gui.addSlider("Light Range", params.cursorLightRange, 0.5, 8, 0.05,
     { title: "How far its glow spreads before fading out." },
   );
-  gui.addSlider("Light Distance", params.cursorLightOffset, 0, 3, 0.01,
+  gui.addSlider("Light Distance", params.cursorLightOffset, 0, 3, 0.005,
     { title: "How far the light floats in front of the letters. At 0 it sits inside them and cannot light or shadow their faces at all." },
   );
   gui.addCheckbox("Light Is Physical", params.lightPhysics,
@@ -202,7 +277,12 @@ function buildPanel(gui, params, actions, stats) {
   );
   gui.addSection("Bloom");
   gui.addSlider("Bloom", params.bloom, 0, 2, 0.01, { title: "How much bright areas glow. 0 turns it off." });
-  gui.addSlider("Bloom Radius", params.bloomRadius, 2, 8, 0.1, { title: "How far the glow spreads." });
+  gui.addSlider("Bloom Radius", params.bloomRadius, 0, 1, 0.01,
+    { title: "How far the glow spreads, by shifting it between the sharp and the blurry copies. Overall brightness stays the same either way." },
+  );
+  gui.addSlider("Bloom Threshold", params.bloomThreshold, 0, 2, 0.01,
+    { title: "How bright something must be before it glows at all. 0 blooms everything, which can wash out bright surfaces." },
+  );
 
   gui.addSection("Lens");
   gui.addSlider("Fog", params.fogDensity, 0, 0.1, 0.001,
@@ -214,6 +294,9 @@ function buildPanel(gui, params, actions, stats) {
   );
   gui.addSlider("Antialias", params.fxaa, 0, 1, 0.01,
     { title: "Smooths the stair-stepping along letter edges. 0 turns it off, 1 is full strength." },
+  );
+  gui.addSlider("Specular AA", params.specularAA, 0, 2, 0.01,
+    { title: "Stops shiny letters twinkling as they move, by roughening the surface only where it curves too fast for a pixel to follow. Raise it if polished looks shimmer." },
   );
   gui.addSlider("Chromatic", params.chromatic, 0, 80, 1,
     { title: "Spreads the image across the spectrum towards the edges of the frame, in pixels. 0 turns it off." },
@@ -235,6 +318,12 @@ function buildPanel(gui, params, actions, stats) {
   gui.addCheckbox("Physics", params.physics, { title: "Lets the letters move and collide. Off holds them still." });
   gui.addSlider("Mass Variation", params.massVariation, 0, 1, 0.01,
     { title: "How much a letter's size affects its weight. Higher makes small letters fly much further." },
+  );
+  gui.addSlider("Damping", params.damping, 0, 0.9, 0.01,
+    { title: "How much drag the air has. 0 lets letters coast forever, high values bring them to a stop almost at once." },
+  );
+  gui.addSlider("Bounce", params.bounce, 0, 1, 0.01,
+    { title: "How much speed survives a collision. 0 makes letters land dead against each other, 1 makes them fully elastic." },
   );
   gui.addSlider("Return Home", params.returnHome, 0, 8, 0.01,
     { title: "How strongly letters are pulled back into place. 0 lets them drift away." },

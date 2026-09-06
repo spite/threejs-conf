@@ -11,6 +11,8 @@ const vec3 LUMA = vec3(0.299, 0.587, 0.114);
 const float SPAN_MAX = 8.0;
 const float REDUCE_MUL = 0.125;
 const float REDUCE_MIN = 0.0078125;
+const float EDGE_THRESHOLD = 0.166;
+const float EDGE_THRESHOLD_MIN = 0.0833;
 
 void main() {
   vec3 middle = texture(inputTexture, vUv).rgb;
@@ -34,7 +36,7 @@ void main() {
 
   float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE)));
   float lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));
-  if (lMax - lMin < lMax * 0.0312) {
+  if (lMax - lMin < max(EDGE_THRESHOLD_MIN, lMax * EDGE_THRESHOLD)) {
     fragColor = vec4(middle, 1.0);
     return;
   }

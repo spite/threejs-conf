@@ -1,10 +1,14 @@
 import {
   GLSL3,
+  UnsignedByteType,
+  RepeatWrapping,
+  DataTexture,
   RawShaderMaterial,
   NearestFilter,
   HalfFloatType,
   FloatType,
   RedFormat,
+  RGFormat,
   Color,
   Vector2,
   Vector3,
@@ -16,11 +20,38 @@ import { BloomPass } from "modules/bloomPass.js";
 import { shader as depthVs } from "shaders/shadowVs.js";
 import { shader as depthFs } from "shaders/shadowFs.js";
 import { shader as ssaoFs } from "shaders/composite.js";
+import { generateBlueNoise } from "modules/blueNoise.js";
 import { shader as blurFs } from "shaders/final.js";
 import { shader as aberrationFs } from "shaders/aberration.js";
 import { shader as fxaaFs } from "shaders/fxaa.js";
 import { getFBO } from "modules/fbo.js";
 import { shader as orthoVs } from "shaders/ortho.js";
+
+const BLUE_NOISE_SIZE = 64;
+
+function makeBlueNoiseTexture() {
+  const total = BLUE_NOISE_SIZE * BLUE_NOISE_SIZE;
+  const angle = generateBlueNoise(BLUE_NOISE_SIZE, 0x9e3779b1);
+  const jitter = generateBlueNoise(BLUE_NOISE_SIZE, 0x85ebca6b);
+  const data = new Uint8Array(total * 2);
+  for (let i = 0; i < total; i++) {
+    data[i * 2] = angle[i];
+    data[i * 2 + 1] = jitter[i];
+  }
+  const texture = new DataTexture(
+    data,
+    BLUE_NOISE_SIZE,
+    BLUE_NOISE_SIZE,
+    RGFormat,
+    UnsignedByteType,
+  );
+  texture.wrapS = texture.wrapT = RepeatWrapping;
+  texture.minFilter = texture.magFilter = NearestFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+const blueNoiseTexture = makeBlueNoiseTexture();
 
 class SSAO {
   constructor() {
@@ -103,6 +134,8 @@ class SSAO {
         pointShadowSteps: { value: 16 },
         pointShadowSoftness: { value: 0.25 },
         pointShadowRays: { value: 4 },
+        blueNoise: { value: blueNoiseTexture },
+        blueNoiseSize: { value: BLUE_NOISE_SIZE },
         toneMappingExposure: { value: 1 },
       },
       vertexShader: orthoVs,
@@ -126,11 +159,13 @@ class SSAO {
       type: HalfFloatType,
     });
 
-    this.bloom = new BloomPass(3, 5, { type: HalfFloatType });
+    this.bloom = new BloomPass(5, { type: HalfFloatType });
 
     this.blurShader = new RawShaderMaterial({
       uniforms: {
         sceneMap: { value: this.pass.texture },
+        blueNoise: { value: blueNoiseTexture },
+        blueNoiseSize: { value: BLUE_NOISE_SIZE },
         velocityMap: { value: this.velocity },
         debugView: { value: 0 },
         bloom0: { value: null },
@@ -139,6 +174,7 @@ class SSAO {
         bloom3: { value: null },
         bloom4: { value: null },
         bloomStrength: { value: 0.4 },
+        bloomRadius: { value: 0.5 },
         vignette: { value: 0.35 },
         dither: { value: 1 },
         shutter: { value: 0.5 },

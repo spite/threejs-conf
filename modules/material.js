@@ -94,6 +94,7 @@ class Material extends RawShaderMaterial {
         hasRoughnessMap: { value: params.uniforms.hasRoughnessMap },
         roughnessMap: { value: params.uniforms.roughnessMap },
         roughnessScale: { value: params.uniforms.roughnessScale ?? 1 },
+        specularAA: { value: params.uniforms.specularAA ?? 1 },
 
         hasNormalMap: { value: params.uniforms.hasNormalMap },
         normalMap: { value: params.uniforms.normalMap },

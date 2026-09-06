@@ -41,7 +41,7 @@ import { createSound } from "modules/sound.js";
 import { createLetters } from "modules/letters.js";
 import { makeGlowMaterial } from "modules/letterMaterial.js";
 import { PhysicsDebug } from "modules/PhysicsDebug.js";
-import { defaults, QUALITY } from "modules/defaults.js";
+import { defaults, QUALITY, LOOKS, FEELS } from "modules/defaults.js";
 
 const blendFactor = tweened(0, 1000);
 
@@ -136,7 +136,15 @@ const gui = new GUI("threejs-conf", document.querySelector("#gui-container"), {
 buildPanel(
   gui,
   params,
-  { randomize, resetParams, copyStateLink, regenerate, applyQuality },
+  {
+    randomize,
+    resetParams,
+    copyStateLink,
+    regenerate,
+    applyQuality,
+    applyLook,
+    applyFeel,
+  },
   { ...monitors, info: audioInfo },
 );
 gui.show();
@@ -177,6 +185,8 @@ let lightEntry = null;
 const PULSE_STIFFNESS = 180;
 const PULSE_DAMPING = 14;
 const PULSE_STEP = 1 / 240;
+const MAX_DT = 1 / 30;
+const BALL_SMOOTH = 0.35;
 let pulse = 0;
 let pulseVelocity = 0;
 const ballUp = new Vector3(0, 1, 0);
@@ -321,12 +331,33 @@ init();
 let hueFrom = params.hue.peek();
 let hueTo = hueFrom;
 
-function randomize() {
+function setHue(value) {
   hueFrom = hueTo;
-  hueTo = Math.random();
-  params.hue.set(hueTo);
+  hueTo = value;
+  params.hue.set(value);
   blendFactor.reset(0);
   blendFactor.set(1);
+}
+
+function applyLook(name) {
+  const preset = LOOKS[name];
+  if (!preset) return;
+  batch(() => {
+    for (const [key, value] of Object.entries(preset)) params[key].set(value);
+  });
+  setHue(preset.hue);
+}
+
+function applyFeel(name) {
+  const preset = FEELS[name];
+  if (!preset) return;
+  batch(() => {
+    for (const [key, value] of Object.entries(preset)) params[key].set(value);
+  });
+}
+
+function randomize() {
+  setHue(Math.random());
   params.seed.set(Maf.intRandomInRange(0, 1e6));
   params.stampDensity.set(Maf.randomInRange(0.3, 1.6));
   const low = Maf.randomInRange(0.15, 0.6);
@@ -340,6 +371,63 @@ const pushPoint = new Vector3();
 const pushDir = new Vector3();
 const cameraDir = new Vector3();
 let pointerDown = false;
+let idleTime = 0;
+let attracting = false;
+let burstTimer = 0;
+const attractPoint = new Vector3();
+const attractDir = new Vector3();
+
+function wake() {
+  idleTime = 0;
+  attracting = false;
+}
+
+function attractBurst() {
+  if (!letters.length) return;
+  const letter = letters[Math.floor(Math.random() * letters.length)];
+  attractPoint.copy(letter.position);
+  attractDir
+    .set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)
+    .normalize();
+  physics.burst(
+    attractPoint,
+    attractDir,
+    params.clickStrength() * 0.6,
+    params.clickRadius(),
+    params.falloff(),
+    params.clickSpin(),
+  );
+  pulseVelocity += 10;
+}
+
+function stepAttract(dt) {
+  const after = params.attract();
+  if (after <= 0 || !running) {
+    if (attracting) attracting = false;
+    controls.autoRotate = false;
+    return;
+  }
+
+  idleTime += dt;
+  if (!attracting && idleTime > after) {
+    attracting = true;
+    burstTimer = 0;
+  }
+
+  controls.autoRotate = attracting;
+  controls.autoRotateSpeed = params.attractSpin();
+
+  if (!attracting) return;
+
+  const every = params.attractBurst();
+  if (every <= 0 || !params.physics()) return;
+
+  burstTimer -= dt;
+  if (burstTimer <= 0) {
+    burstTimer = every * (0.7 + Math.random() * 0.6);
+    attractBurst();
+  }
+}
 let pointerOver = false;
 let pointerOnUI = false;
 let shiftDown = false;
@@ -366,11 +454,13 @@ function pointerWorld() {
 }
 
 window.addEventListener("pointermove", (e) => {
+  wake();
   updatePointer(e);
   pointerOver = fromScene(e);
 });
 
 window.addEventListener("pointerdown", (e) => {
+  wake();
   sound.start();
 
   pointerOnUI = !fromScene(e);
@@ -413,6 +503,7 @@ window.addEventListener("pointerleave", () => {
 
 window.addEventListener("keydown", (e) => {
   if (isEditing(e.target)) return;
+  wake();
   if (e.key === "Shift") shiftDown = true;
   if (e.key === "Alt") altDown = true;
 });
@@ -492,6 +583,8 @@ function stepPhysics(dt) {
       clusterStrength: params.cluster(),
       clusterRadius: params.clusterRadius(),
       clusterSettle: params.clusterSettle(),
+      damping: params.damping(),
+      bounce: params.bounce(),
     });
     if (holding) {
       pullPoint
@@ -554,7 +647,7 @@ function updateCursorBall(lightOn, dt) {
   ballDelta
     .subVectors(cursorBall.position, ballPrevious)
     .divideScalar(Math.max(dt, 1e-4));
-  ballVelocity.lerp(ballDelta, 0.35);
+  ballVelocity.lerp(ballDelta, 1 - Math.pow(1 - BALL_SMOOTH, dt * 60));
   ballPrevious.copy(cursorBall.position);
 
   sound.setCursor(cursorBall.position, ballVelocity);
@@ -648,7 +741,8 @@ function updateSceneAndPost(dt) {
   mb.maxVelocity.value = params.maxBlur();
   mb.toneMappingExposure.value = params.exposure();
   mb.bloomStrength.value = params.bloom();
-  ssao.bloom.strength = params.bloomRadius();
+  mb.bloomRadius.value = params.bloomRadius();
+  ssao.bloom.threshold = params.bloomThreshold();
   ssao.aberrationShader.uniforms.aberration.value = params.chromatic();
   mb.vignette.value = params.vignette();
   mb.dither.value = params.dither();
@@ -662,13 +756,14 @@ function updateSceneAndPost(dt) {
 render(() => {
   statFrame.tick();
   renderer.info.reset();
-  controls.update();
 
-  const dt = clock.getDelta();
+  const dt = Math.min(clock.getDelta(), MAX_DT);
+  controls.update(dt);
   if (running) {
     clickCharge = Math.max(0, clickCharge - dt / params.buildupDecay());
   }
 
+  stepAttract(dt);
   stepPhysics(dt);
 
   sampleStats();

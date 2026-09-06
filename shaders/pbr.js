@@ -23,6 +23,7 @@ uniform vec3 color;
 uniform bool hasRoughnessMap;
 uniform float roughness;
 uniform float roughnessScale;
+uniform float specularAA;
 uniform sampler2D roughnessMap;
 
 uniform float metalness;

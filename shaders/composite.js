@@ -34,6 +34,8 @@ uniform float pointShadowStrength;
 uniform float pointShadowBias;
 uniform float pointShadowThickness;
 uniform float pointShadowSoftness;
+uniform sampler2D blueNoise;
+uniform int blueNoiseSize;
 uniform int pointShadowSteps;
 uniform int pointShadowRays;
 
@@ -95,6 +97,10 @@ vec3 shadowTint(float lit, float strength) {
   return mix(shadowColor, vec3(1.0), mix(1.0, clamp(lit, 0.0, 1.0), strength));
 }
 
+vec2 blueNoiseAt(vec2 p) {
+  return texelFetch(blueNoise, ivec2(p) % blueNoiseSize, 0).rg;
+}
+
 float pointShadowRay(vec3 origin, vec3 target, float jitter) {
   vec3 toTarget = target - origin;
   float dist = length(toTarget);
@@ -124,7 +130,7 @@ float pointShadowRay(vec3 origin, vec3 target, float jitter) {
   return 0.0;
 }
 
-float pointOcclusion(vec3 viewPosition, vec3 viewNormal, vec2 uv) {
+float pointOcclusion(vec3 viewPosition, vec3 viewNormal) {
   if (pointShadowStrength <= 0.0 || pointShadowSteps <= 0) return 0.0;
 
   vec3 toLight = pointLightPosition - viewPosition;
@@ -134,25 +140,26 @@ float pointOcclusion(vec3 viewPosition, vec3 viewNormal, vec2 uv) {
   vec3 L = toLight / dist;
   if (dot(viewNormal, L) <= 0.0) return 0.0;
 
-  float jitter = random(uv, 13.0) + 0.5;
+  vec2 noise = blueNoiseAt(gl_FragCoord.xy);
+  float jitter = noise.y;
   vec3 origin = viewPosition + viewNormal * pointShadowBias;
 
   vec3 helper = abs(L.z) < 0.99 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
   vec3 tx = normalize(cross(helper, L));
   vec3 ty = cross(L, tx);
 
-  float angle = random(uv, 29.0) * 6.2831853;
-  float ca = cos(angle);
-  float sa = sin(angle);
+  float angle = noise.x * 6.2831853;
 
-  int rays = clamp(pointShadowRays, 1, 8);
+  int rays = pointShadowSoftness < 1e-4 ? 1 : clamp(pointShadowRays, 1, 8);
+  float spread = rays > 1 ? pointShadowSoftness : 0.0;
   float occluded = 0.0;
 
   for (int r = 0; r < 8; r++) {
     if (r >= rays) break;
 
-    vec2 o = POISSON[r] * pointShadowSoftness;
-    vec2 d = vec2(o.x * ca - o.y * sa, o.x * sa + o.y * ca);
+    float t = (float(r) + 0.5) / float(rays);
+    float a = angle + float(r) * 2.39996323;
+    vec2 d = vec2(cos(a), sin(a)) * sqrt(t) * spread;
     vec3 target = pointLightPosition + tx * d.x + ty * d.y;
 
     occluded += pointShadowRay(origin, target, jitter);
@@ -232,7 +239,7 @@ void main() {
       return;
     }
     vec3 n9 = normalize(texture(normalMap, vUv).xyz);
-    float occ9 = pointOcclusion(posDepth.xyz, n9, vUv);
+    float occ9 = pointOcclusion(posDepth.xyz, n9);
     fragColor = vec4(shadowTint(1.0 - occ9, pointShadowStrength), 1.0);
     return;
   }
@@ -297,7 +304,7 @@ void main() {
   vec3 pShade = vec3(1.0);
   if (dot(pointLit, vec3(0.2126, 0.7152, 0.0722)) > 0.002) {
     pShade = shadowTint(
-      1.0 - pointOcclusion(position, normal, vUv),
+      1.0 - pointOcclusion(position, normal),
       pointShadowStrength
     );
   }

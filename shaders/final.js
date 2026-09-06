@@ -12,6 +12,9 @@ uniform sampler2D bloom2;
 uniform sampler2D bloom3;
 uniform sampler2D bloom4;
 uniform float bloomStrength;
+uniform float bloomRadius;
+uniform sampler2D blueNoise;
+uniform int blueNoiseSize;
 uniform float vignette;
 uniform float dither;
 uniform int debugView;
@@ -78,6 +81,14 @@ float interleavedGradient(vec2 p) {
   return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
 }
 
+float blueNoiseAt(vec2 p) {
+  return texelFetch(blueNoise, ivec2(p) % blueNoiseSize, 0).g;
+}
+
+float bloomFactor(float factor) {
+  return mix(factor, 1.2 - factor, bloomRadius);
+}
+
 void main() {
   if (debugView != VIEW_BEAUTY) {
     fragColor = vec4(texture(sceneMap, vUv).rgb, 1.0);
@@ -95,12 +106,13 @@ void main() {
   float pixels = length(velocity / texel);
   int count = int(clamp(pixels, 1.0, samples));
 
+  float jitter = blueNoiseAt(gl_FragCoord.xy);
   vec3 sum = vec3(0.0);
   float total = 0.0;
 
   for (int i = 0; i < 32; i++) {
     if (i >= count) break;
-    float t = count > 1 ? float(i) / float(count - 1) - 0.5 : 0.0;
+    float t = (float(i) + jitter) / float(count) - 0.5;
     sum += textureLod(sceneMap, vUv + velocity * t, 0.0).rgb;
     total += 1.0;
   }
@@ -108,12 +120,12 @@ void main() {
   vec3 color = sum / max(total, 1.0);
 
   if (bloomStrength > 0.0) {
-    vec3 b = texture(bloom0, vUv).rgb;
-    b += 2.0 * texture(bloom1, vUv).rgb;
-    b += 4.0 * texture(bloom2, vUv).rgb;
-    b += 8.0 * texture(bloom3, vUv).rgb;
-    b += 16.0 * texture(bloom4, vUv).rgb;
-    color += (b / 31.0) * bloomStrength;
+    vec3 b = bloomFactor(1.0) * texture(bloom0, vUv).rgb;
+    b += bloomFactor(0.8) * texture(bloom1, vUv).rgb;
+    b += bloomFactor(0.6) * texture(bloom2, vUv).rgb;
+    b += bloomFactor(0.4) * texture(bloom3, vUv).rgb;
+    b += bloomFactor(0.2) * texture(bloom4, vUv).rgb;
+    color += (b / 3.0) * bloomStrength;
   }
 
   if (vignette > 0.0) {

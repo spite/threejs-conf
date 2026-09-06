@@ -24,6 +24,15 @@ vec3 rotateFromTo(vec3 a, vec3 b, vec3 v) {
     return v * c + cross(axis, v) * s + axis * dot(axis, v) * (1.0 - c);
 }
 
+float filterRoughness(vec3 normal, float roughness) {
+    if (specularAA <= 0.0) return roughness;
+    vec3 dndu = dFdx(normal);
+    vec3 dndv = dFdy(normal);
+    float variance = 0.25 * (dot(dndu, dndu) + dot(dndv, dndv));
+    float kernel = min(2.0 * variance * specularAA, 0.18);
+    return sqrt(clamp(roughness * roughness + kernel, 0.0, 1.0));
+}
+
 void main() { 
 
     mat3 viewMatrixInverse = mat3(inverse(viewMatrix));
@@ -42,6 +51,8 @@ void main() {
         r = clamp(r + (texColor.r - 0.5) * roughnessScale, 0.0, 1.0);
     }
     vec4 diffuseColor = vec4(color, 1.0);
+
+    r = filterRoughness(worldNormal, r);
 
     vec3 pointContribution;
     vec3 outgoingLight = shade(vWorldPosition, worldNormal, vUv, diffuseColor, r, m, pointContribution);

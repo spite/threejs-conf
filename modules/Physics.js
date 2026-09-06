@@ -32,6 +32,8 @@ class Physics {
     this.idleStrength = 0;
     this.homeStrength = 2.5;
     this.homeTorque = 1.5;
+    this.damping = 0.05;
+    this.bounce = 0.35;
   }
 
   static async create(factory) {
@@ -116,8 +118,8 @@ class Physics {
     const body = new ammo.btRigidBody(info);
     body.setUserIndex(this.bodies.length + 1);
 
-    body.setDamping(0.05, 0.05);
-    body.setRestitution(0.35);
+    body.setDamping(this.damping, this.damping);
+    body.setRestitution(this.bounce);
     body.setFriction(0.5);
     body.setActivationState(4);
 
@@ -385,6 +387,17 @@ class Physics {
     this.clusterStrength = settings.clusterStrength;
     this.clusterRadius = settings.clusterRadius;
     this.clusterSettle = settings.clusterSettle;
+
+    if (settings.damping !== this.damping) {
+      this.damping = settings.damping;
+      for (const entry of this.bodies) {
+        entry.body.setDamping(this.damping, this.damping);
+      }
+    }
+    if (settings.bounce !== this.bounce) {
+      this.bounce = settings.bounce;
+      for (const entry of this.bodies) entry.body.setRestitution(this.bounce);
+    }
   }
 
   collectContacts() {

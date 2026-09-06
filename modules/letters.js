@@ -51,6 +51,8 @@ function createLetters(ctx) {
     const normal = createNormalMap(renderer, albedo.texture);
     normal.setSize(MAP_SIZE, MAP_SIZE);
     normal.fbo.texture.wrapS = normal.fbo.texture.wrapT = RepeatWrapping;
+    normal.fbo.texture.minFilter = LinearMipmapLinearFilter;
+    normal.fbo.texture.generateMipmaps = true;
     normal.fbo.texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
     slot = { albedo, normal };
@@ -194,6 +196,7 @@ function createLetters(ctx) {
     const texScale = params.texScale();
     const blendSharpness = params.blendSharpness();
     const normalStrength = params.normalStrength();
+    const specularAA = params.specularAA();
     const envMapIntensity = params.envMapIntensity();
     const sss = params.sss();
     const sssPower = params.sssPower();
@@ -235,6 +238,7 @@ function createLetters(ctx) {
       u.texScale.value = texScale * letter.userData.texScale;
       u.blendSharpness.value = blendSharpness;
       u.normalScale.value.setScalar(normalStrength);
+      u.specularAA.value = specularAA;
       u.envMapIntensity.value = envMapIntensity;
       u.sssStrength.value = sss;
       u.sssPower.value = sssPower;
