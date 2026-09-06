@@ -189,7 +189,13 @@ function buildPanel(gui, params, actions, stats) {
   gui.addSlider("Bloom Radius", params.bloomRadius, 2, 8, 0.1, { title: "How far the glow spreads." });
 
   gui.addSection("Lens");
+  gui.addSlider("Fog", params.fogDensity, 0, 0.1, 0.001,
+    { title: "How thickly the air fades the letters into the backdrop with distance. 0 turns it off." },
+  );
   gui.addSlider("Vignette", params.vignette, 0, 1, 0.01, { title: "Darkens the corners. 0 turns it off." });
+  gui.addSlider("Dither", params.dither, 0, 3, 0.05,
+    { title: "Breaks up the banding rings in smooth gradients with a touch of noise. 0 turns it off." },
+  );
   gui.addSlider("Chromatic", params.chromatic, 0, 80, 1,
     { title: "Spreads the image across the spectrum towards the edges of the frame, in pixels. 0 turns it off." },
   );
@@ -221,8 +227,8 @@ function buildPanel(gui, params, actions, stats) {
     { title: "A slow random wander so the letters never sit perfectly still. 0 leaves them dead." },
   );
   gui.addSection("Interaction");
-  gui.addSlider("Hover Nudge", params.hoverStrength, 0, 1, 0.005,
-    { title: "How much just moving the mouse disturbs the letters. 0 turns it off." },
+  gui.addSlider("Hover Nudge", params.hoverStrength, -1, 1, 0.005,
+    { title: "How much just moving the mouse disturbs the letters. 0 turns it off, and negative values pull them toward the cursor instead of pushing them away." },
   );
   gui.addSlider("Hover Radius", params.hoverRadius, 0.1, 2, 0.01, { title: "How far that nudge reaches." });
   gui.addSlider("Hold Pull", params.holdPull, 0, 40, 0.1,
@@ -261,14 +267,14 @@ function buildPanel(gui, params, actions, stats) {
   gui.addCheckbox("Sound", params.sound,
     { title: "Turns the sound on. Click once first, since browsers won't start audio on their own." },
   );
-  gui.addSlider("Volume", params.volume, 0, 1, 0.01, { title: "Overall loudness." });
+  gui.addSlider("Volume", params.volume, 0, 2, 0.01, { title: "Overall volume." });
   gui.addSlider("Pause Fade", params.pauseFade, 0, 2, 0.01,
     { title: "How long sound takes to fade out when you pause or switch tabs, and back in when you return. 0 cuts instantly." },
   );
   gui.addSection("Voices");
-  gui.addSlider("Swish", params.swishLevel, 0, 2, 0.01, { title: "Loudness of the whoosh letters make as they fly." });
-  gui.addSlider("Spin Tone", params.spinLevel, 0, 2, 0.01,
-    { title: "Loudness of the fluttering sound letters make while tumbling." },
+  gui.addSlider("Swish", params.swishLevel, 0, 2, 0.01, { title: "Volume of the whoosh letters make as they fly." });
+  gui.addSlider("Spin Volume", params.spinLevel, 0, 2, 0.01,
+    { title: "Volume of the fluttering sound letters make while tumbling." },
   );
   gui.addSlider("Sound Pitch", params.soundTone, 0.3, 2, 0.01,
     { title: "Higher or lower overall tone for the movement sounds." },
@@ -277,8 +283,8 @@ function buildPanel(gui, params, actions, stats) {
     { title: "How much bigger letters sound deeper than smaller ones." },
   );
   gui.addSection("Impacts");
-  gui.addSlider("Impacts", params.impactLevel, 0, 4, 0.01,
-    { title: "Loudness of the knocks when letters hit each other." },
+  gui.addSlider("Impacts", params.impactLevel, 0, 2, 0.01,
+    { title: "Volume of the knocks when letters hit each other." },
   );
   gui.addSlider("Impact Decay", params.impactDecay, 0.05, 2, 0.01, { title: "How long each knock rings out." });
   gui.addSlider("Impact Pitch", params.impactPitch, 0.5, 3, 0.01, { title: "How big and heavy the knocks sound." });
@@ -294,10 +300,13 @@ function buildPanel(gui, params, actions, stats) {
   );
   gui.addSlider("Reverb", params.reverb, 0, 1, 0.01, { title: "How much room and echo there is." });
   gui.addSlider("Reverb Size", params.reverbSize, 0.3, 8, 0.1, { title: "How big that room feels." });
-  gui.addSlider("Drone", params.drone, 0, 1, 0.01,
+  gui.addSlider("Light Sphere", params.lightSphere, 0, 2, 0.01,
+    { title: "How loudly the light sphere whooshes as you move it. 0 turns it off." },
+  );
+  gui.addSlider("Drone", params.drone, 0, 2, 0.01,
     { title: "A low background hum that never quite repeats. 0 turns it off." },
   );
-  gui.addSlider("Drone Tone", params.droneTone, 0, 1, 0.01,
+  gui.addSlider("Drone Tone", params.droneTone, 0, 2, 0.01,
     { title: "How bright the hum is. Low is a deep rumble, high lets more of it through." },
   );
 

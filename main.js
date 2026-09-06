@@ -508,6 +508,8 @@ function updateCursorBall(lightOn, dt) {
   ballVelocity.lerp(ballDelta, 0.35);
   ballPrevious.copy(cursorBall.position);
 
+  sound.setCursor(cursorBall.position, ballVelocity);
+
   const speed = ballVelocity.length();
   const stretch = 1 + Math.min(speed / 6, 3);
   const squash = 1 / Math.sqrt(stretch);
@@ -578,6 +580,7 @@ function updateSceneAndPost(dt) {
   ao.pointShadowRays.value = Math.round(params.cursorShadowRays());
   ao.backgroundSky.value.copy(skyColor);
   ao.backgroundGround.value.copy(groundColor);
+  ao.fogDensity.value = params.fogDensity();
   ao.radius.value = params.aoRadius();
   ao.strength.value = params.aoStrength();
   ao.bias.value = params.aoBias();
@@ -593,6 +596,7 @@ function updateSceneAndPost(dt) {
   ssao.bloom.strength = params.bloomRadius();
   ssao.aberrationShader.uniforms.aberration.value = params.chromatic();
   mb.vignette.value = params.vignette();
+  mb.dither.value = params.dither();
 
   const view = debugViewIndex.get(params.debugView()) ?? 0;
   ao.debugView.value = view;

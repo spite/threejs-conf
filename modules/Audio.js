@@ -1,6 +1,21 @@
 const NOISE_BUFFERS = 3;
 const NOISE_SECONDS = 2;
 const DRONE_AIR_SECONDS = 11;
+const NOMINAL = {
+  volume: 0.49,
+  swish: 0.25,
+  spin: 0.25,
+  impact: 1.93,
+  lightSphere: 0.5,
+  drone: 1,
+};
+
+const LIGHT_SPHERE_ROOT = 96;
+const LIGHT_SPHERE_WOBBLE = [
+  { rate: 5.3, cents: 15 },
+  { rate: 5.3 * Math.SQRT2, cents: 9 },
+];
+const LIGHT_SPHERE_MAX = 6;
 const IMPACT_PANNERS = 8;
 
 function makeNoise(ctx, seconds) {
@@ -78,10 +93,10 @@ class SketchAudio {
     this.samples = [];
     this.sampleIndex = 0;
 
-    this.volume = 0.7;
-    this.swish = 1;
-    this.spin = 1;
-    this.impact = 1;
+    this.volume = NOMINAL.volume;
+    this.swish = NOMINAL.swish;
+    this.spin = NOMINAL.spin;
+    this.impact = NOMINAL.impact;
     this.reverb = 0.5;
     this.reverbSize = 3.5;
     this.fade = 0.35;
@@ -99,7 +114,9 @@ class SketchAudio {
     this.lastHit = -1e9;
     this.lastImpulse = 0;
 
-    this.drone = 0.25;
+    this.lightSphere = NOMINAL.lightSphere;
+
+    this.drone = NOMINAL.drone;
     this.droneTone = 1;
     this.droneVoices = [];
 
@@ -272,6 +289,7 @@ class SketchAudio {
     this.master.connect(ctx.destination);
 
     this.startDrone();
+    this.startLightSphere();
 
     this.noise = [];
     for (let i = 0; i < NOISE_BUFFERS; i++) {
@@ -642,11 +660,11 @@ class SketchAudio {
   }
 
   configure(settings) {
-    this.volume = settings.volume;
+    this.volume = settings.volume * NOMINAL.volume;
     this.fade = settings.fade;
-    this.swish = settings.swish;
-    this.spin = settings.spin;
-    this.impact = settings.impact;
+    this.swish = settings.swish * NOMINAL.swish;
+    this.spin = settings.spin * NOMINAL.spin;
+    this.impact = settings.impact * NOMINAL.impact;
     this.tone = settings.tone;
     this.impactDecay = settings.impactDecay;
     this.impactPitch = settings.impactPitch;
@@ -654,9 +672,111 @@ class SketchAudio {
     this.doppler = settings.doppler;
     this.reverb = settings.reverb;
     this.reverbSize = settings.reverbSize;
-    this.drone = settings.drone;
+    this.lightSphere = settings.lightSphere * NOMINAL.lightSphere;
+    this.drone = settings.drone * NOMINAL.drone;
     this.droneTone = settings.droneTone;
     this.setPanningModel(settings.panningModel);
+  }
+
+  startLightSphere() {
+    const ctx = this.ctx;
+
+    this.lightSphereGain = ctx.createGain();
+    this.lightSphereGain.gain.value = 0;
+    this.lightSpherePanner = this.makePanner();
+    this.lightSphereGain.connect(this.lightSpherePanner);
+    this.lightSpherePanner.connect(this.bus);
+
+    this.lightSphereFilter = ctx.createBiquadFilter();
+    this.lightSphereFilter.type = "lowpass";
+    this.lightSphereFilter.Q.value = 1;
+    this.lightSphereFilter.frequency.value = 460;
+    this.lightSphereFilter.connect(this.lightSphereGain);
+
+    this.lightSphereOscs = [];
+    for (const detune of [-14, 9]) {
+      const osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = LIGHT_SPHERE_ROOT;
+      osc.detune.value = detune;
+      osc.connect(this.lightSphereFilter);
+      osc.start();
+      this.lightSphereOscs.push(osc);
+    }
+
+    for (const wobble of LIGHT_SPHERE_WOBBLE) {
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = wobble.rate;
+      const depth = ctx.createGain();
+      depth.gain.value = wobble.cents;
+      lfo.connect(depth);
+      for (const osc of this.lightSphereOscs) depth.connect(osc.detune);
+      lfo.start();
+    }
+
+    const flutter = ctx.createOscillator();
+    flutter.frequency.value = LIGHT_SPHERE_WOBBLE[0].rate * Math.sqrt(3);
+    const flutterDepth = ctx.createGain();
+    flutterDepth.gain.value = 90;
+    flutter.connect(flutterDepth);
+    flutterDepth.connect(this.lightSphereFilter.frequency);
+    flutter.start();
+
+    this.lightSphereAir = ctx.createBiquadFilter();
+    this.lightSphereAir.type = "bandpass";
+    this.lightSphereAir.Q.value = 0.7;
+    this.lightSphereAir.frequency.value = 1100;
+
+    this.lightSphereNoise = ctx.createGain();
+    this.lightSphereNoise.gain.value = 0;
+    this.lightSphereAir.connect(this.lightSphereNoise);
+    this.lightSphereNoise.connect(this.lightSphereGain);
+
+    const source = ctx.createBufferSource();
+    source.buffer = makeNoise(ctx, NOISE_SECONDS);
+    source.loop = true;
+    source.connect(this.lightSphereAir);
+    source.start(ctx.currentTime, Math.random() * NOISE_SECONDS);
+  }
+
+  moveLightSphere(speed, at, velocity) {
+    if (!this.ready) return;
+
+    const now = this.ctx.currentTime;
+    const s = Math.min(speed / LIGHT_SPHERE_MAX, 1);
+    const swing = s * s;
+
+    this.lightSphereGain.gain.setTargetAtTime(
+      this.lightSphere * (0.05 + swing * 0.95) * 0.5,
+      now,
+      0.06,
+    );
+    for (const osc of this.lightSphereOscs) {
+      osc.frequency.setTargetAtTime(LIGHT_SPHERE_ROOT * (1 + s * 0.7), now, 0.06);
+    }
+    this.lightSphereFilter.frequency.setTargetAtTime(
+      420 + swing * 3200,
+      now,
+      0.06,
+    );
+    this.lightSphereAir.frequency.setTargetAtTime(
+      900 + swing * 5200,
+      now,
+      0.05,
+    );
+    this.lightSphereNoise.gain.setTargetAtTime(swing * 1.3, now, 0.05);
+
+    if (at) {
+      this.placePanner(
+        this.lightSpherePanner,
+        at[0], at[1], at[2],
+        velocity ? velocity[0] : 0,
+        velocity ? velocity[1] : 0,
+        velocity ? velocity[2] : 0,
+        now,
+        0.05,
+      );
+    }
   }
 
   droneSwell(rate, depth, floor) {

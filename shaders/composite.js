@@ -27,6 +27,7 @@ uniform sampler2D velocityMap;
 uniform sampler2D pointLightMap;
 uniform int debugView;
 uniform vec2 depthRange;
+uniform float fogDensity;
 uniform mat4 cameraProjection;
 uniform vec3 pointLightPosition;
 uniform float pointShadowStrength;
@@ -71,6 +72,23 @@ vec3 toLinear(vec3 c) {
     c / 12.92,
     vec3(lessThanEqual(c, vec3(0.04045)))
   );
+}
+
+vec3 backgroundAt(vec2 uv) {
+  vec4 ray = cameraProjectionInverse * vec4(uv * 2.0 - 1.0, -1.0, 1.0);
+  vec3 dir = normalize(mat3(viewMatrixInverse) * (ray.xyz / ray.w));
+  return mix(
+    toLinear(backgroundGround),
+    toLinear(backgroundSky),
+    dir.y * 0.5 + 0.5
+  );
+}
+
+float fogAt(vec3 viewPosition) {
+  if (fogDensity <= 0.0) return 0.0;
+  float depth = -viewPosition.z;
+  float f = fogDensity * depth;
+  return 1.0 - exp(-f * f);
 }
 
 vec3 shadowTint(float lit, float strength) {
@@ -220,14 +238,7 @@ void main() {
   }
 
   if (posDepth.w == 0.0) {
-    vec4 ray = cameraProjectionInverse * vec4(vUv * 2.0 - 1.0, -1.0, 1.0);
-    vec3 dir = normalize(mat3(viewMatrixInverse) * (ray.xyz / ray.w));
-    vec3 bg = mix(
-      toLinear(backgroundGround),
-      toLinear(backgroundSky),
-      dir.y * 0.5 + 0.5
-    );
-    fragColor = vec4(bg, 1.0);
+    fragColor = vec4(backgroundAt(vUv), 1.0);
     return;
   }
 
@@ -291,7 +302,8 @@ void main() {
     );
   }
 
-  fragColor = vec4((base * shade + pointLit * pShade) * tint, 1.0);
+  vec3 shaded = (base * shade + pointLit * pShade) * tint;
+  fragColor = vec4(mix(shaded, backgroundAt(vUv), fogAt(position)), 1.0);
 }`;
 
 export { shader };

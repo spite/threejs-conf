@@ -8,7 +8,6 @@ import {
 } from "three";
 import { OrbitControls } from "third_party/OrbitControls.js";
 
-console.log("Common module loaded");
 
 Math.seedrandom = function (seed) {};
 

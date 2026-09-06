@@ -13,6 +13,7 @@ uniform sampler2D bloom3;
 uniform sampler2D bloom4;
 uniform float bloomStrength;
 uniform float vignette;
+uniform float dither;
 uniform int debugView;
 uniform float shutter;
 uniform float maxVelocity;
@@ -73,6 +74,10 @@ vec2 dilatedVelocity(vec2 uv, vec2 texel) {
   return best;
 }
 
+float interleavedGradient(vec2 p) {
+  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
 void main() {
   if (debugView != VIEW_BEAUTY) {
     fragColor = vec4(texture(sceneMap, vUv).rgb, 1.0);
@@ -116,7 +121,9 @@ void main() {
     color *= mix(1.0, smoothstep(1.5, 0.35, edge), vignette);
   }
 
-  fragColor = vec4(linearToSRGB(ACESFilmicToneMapping(color)), 1.0);
+  vec3 graded = linearToSRGB(ACESFilmicToneMapping(color));
+  graded += (interleavedGradient(gl_FragCoord.xy) - 0.5) * dither / 255.0;
+  fragColor = vec4(graded, 1.0);
 }`;
 
 export { shader };

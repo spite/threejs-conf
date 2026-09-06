@@ -99,6 +99,7 @@ function createSound({ camera, group, letters, physics, params }) {
       doppler: params.doppler(),
       reverb: params.reverb(),
       reverbSize: params.reverbSize(),
+      lightSphere: params.lightSphere(),
       drone: params.drone(),
       droneTone: params.droneTone(),
       panningModel: params.hrtf() ? "HRTF" : "equalpower",
@@ -129,6 +130,7 @@ function createSound({ camera, group, letters, physics, params }) {
       state.vz *= worldScale;
     }
 
+    audio.moveLightSphere(cursorSpeed, cursorAt, cursorVelocity);
     audio.update(velocityStates);
   }
 
@@ -156,7 +158,27 @@ function createSound({ camera, group, letters, physics, params }) {
     }
   }
 
-  return { audio, start: startAudio, update: updateAudio, playContacts };
+  const cursorAt = [0, 0, 0];
+  const cursorVelocity = [0, 0, 0];
+  let cursorSpeed = 0;
+
+  function setCursor(position, velocity) {
+    cursorAt[0] = position.x;
+    cursorAt[1] = position.y;
+    cursorAt[2] = position.z;
+    cursorVelocity[0] = velocity.x;
+    cursorVelocity[1] = velocity.y;
+    cursorVelocity[2] = velocity.z;
+    cursorSpeed = velocity.length();
+  }
+
+  return {
+    audio,
+    start: startAudio,
+    update: updateAudio,
+    playContacts,
+    setCursor,
+  };
 }
 
 export { createSound };
