@@ -400,22 +400,29 @@ function wake() {
   attracting = false;
 }
 
-function attractBurst() {
-  if (!letters.length) return;
-  const letter = letters[Math.floor(Math.random() * letters.length)];
-  burstPoint.copy(letter.position);
-  burstDir
-    .set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)
-    .normalize();
+function throwLetters(origin, direction, strength, pulse) {
   physics.burst(
-    burstPoint,
-    burstDir,
-    params.clickStrength() * 0.6,
+    origin,
+    direction,
+    strength,
     params.clickRadius(),
     params.falloff(),
     params.clickSpin(),
   );
-  pulseVelocity += 10;
+  pulseVelocity += pulse;
+}
+
+function randomBurstDir() {
+  return burstDir
+    .set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)
+    .normalize();
+}
+
+function attractBurst() {
+  if (!letters.length) return;
+  const letter = letters[Math.floor(Math.random() * letters.length)];
+  burstPoint.copy(letter.position);
+  throwLetters(burstPoint, randomBurstDir(), params.clickStrength() * 0.6, 10);
 }
 
 function stepAttract(dt) {
@@ -506,15 +513,12 @@ window.addEventListener("pointerup", () => {
   if (pointerDown && running && !altDown && params.physics() && pointerWorld()) {
     pushDir.copy(raycaster.ray.direction);
     clickCharge = Math.min(clickCharge + 1, MAX_CLICK_CHARGE);
-    physics.burst(
+    throwLetters(
       pushPoint,
       pushDir,
       params.clickStrength() * (1 + (clickCharge - 1) * params.clickBuildup()),
-      params.clickRadius(),
-      params.falloff(),
-      params.clickSpin(),
+      14,
     );
-    pulseVelocity += 14;
   }
   pointerDown = false;
 });
@@ -565,18 +569,12 @@ function applyTilt(dt) {
     wake();
     if (running && params.physics() && params.tiltShake() > 0) {
       burstPoint.set(0, 0, 0);
-      burstDir
-        .set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)
-        .normalize();
-      physics.burst(
+      throwLetters(
         burstPoint,
-        burstDir,
+        randomBurstDir(),
         params.clickStrength() * params.tiltShake() * Math.min(shake, 3),
-        params.clickRadius(),
-        params.falloff(),
-        params.clickSpin(),
+        12,
       );
-      pulseVelocity += 12;
     }
   }
 

@@ -1,4 +1,4 @@
-import { Color, Vector2 } from "three";
+import { Color, Matrix3, Vector2 } from "three";
 import { Material } from "modules/material.js";
 import { shader as main } from "shaders/letter.js";
 import { shader as glow } from "shaders/glow.js";
@@ -30,6 +30,7 @@ function makeLetterMaterial(camera, color = 0xffffff) {
       specularAA: 1,
     },
     customUniforms: {
+      viewMatrixInverse: { value: new Matrix3() },
       texScale: { value: 1 },
       blendSharpness: { value: 16 },
       cameraNear: { value: camera.near },

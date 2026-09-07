@@ -227,7 +227,7 @@ function buildPanel(gui, params, actions, stats) {
     { title: "How far its glow spreads before fading out." },
   );
   gui.addSlider("Light Distance", params.cursorLightOffset, 0, 3, 0.005,
-    { title: "How far the light floats in front of the letters. At 0 it sits inside them and cannot light or shadow their faces at all." },
+    { title: "How far the light floats in front of the letters. Near 0 it might end up inside one, where it cannot light or shadow that letter's faces." },
   );
   gui.addCheckbox("Light Is Physical", params.lightPhysics,
     { title: "Turns the light sphere into a real object: it collides with the letters and shoves them out of the way instead of passing through." },

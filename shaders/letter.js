@@ -3,6 +3,7 @@ import { shader as triplanar } from "shaders/triplanar.js";
 const shader = `
 ${triplanar}
 
+uniform mat3 viewMatrixInverse;
 uniform float texScale;
 uniform float blendSharpness;
 uniform vec3 rimColor;
@@ -35,7 +36,6 @@ float filterRoughness(vec3 normal, float roughness) {
 
 void main() { 
 
-    mat3 viewMatrixInverse = mat3(inverse(viewMatrix));
     vec3 worldNormal = normalize(viewMatrixInverse * vNormal);
     vec3 matNormal = normalize(vObjectNormal);
 

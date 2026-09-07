@@ -1,4 +1,5 @@
 import {
+  Matrix3,
   Mesh,
   RepeatWrapping,
   LinearMipmapLinearFilter,
@@ -16,6 +17,7 @@ function createLetters(ctx) {
   const { revision, rebuild, statBuild, tint, bgLight } = ctx;
 
   const MAP_SIZE = 512;
+  const viewRotation = new Matrix3();
 
   let envMap = null;
   const letters = [];
@@ -204,6 +206,7 @@ function createLetters(ctx) {
     const sssDensity = params.sssDensity();
     const rimStrength = params.rim();
     const rimPower = params.rimPower();
+    viewRotation.setFromMatrix4(camera.matrixWorld);
 
     const tintDirty =
       hue !== tint.hue ||
@@ -247,6 +250,7 @@ function createLetters(ctx) {
       u.rimColor.value.copy(bgLight);
       u.rimStrength.value = rimStrength;
       u.rimPower.value = rimPower;
+      u.viewMatrixInverse.value.copy(viewRotation);
     }
   }
 
