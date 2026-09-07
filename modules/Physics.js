@@ -34,6 +34,7 @@ class Physics {
     this.homeTorque = 1.5;
     this.damping = 0.05;
     this.bounce = 0.35;
+    this.gravity = { x: 0, y: 0, z: 0 };
   }
 
   static async create(factory) {
@@ -378,6 +379,16 @@ class Physics {
       this.vec2.setValue(nx * arm, ny * arm, nz * arm);
       entry.body.applyImpulse(this.vec, this.vec2);
     });
+  }
+
+  setGravity(x, y, z) {
+    const g = this.gravity;
+    if (x === g.x && y === g.y && z === g.z) return;
+    g.x = x;
+    g.y = y;
+    g.z = z;
+    this.vec.setValue(x, y, z);
+    this.world.setGravity(this.vec);
   }
 
   configure(settings) {

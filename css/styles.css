@@ -97,3 +97,31 @@ canvas {
   0%, 100% { opacity: 0.25; }
   50% { opacity: 0.8; }
 }
+
+#audio-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 50;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: rgba(5, 4, 10, 0.55);
+  color: #fff;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+#audio-hint.visible {
+  opacity: 0.72;
+}
+
+#audio-hint span {
+  animation: loading-pulse 2.4s ease-in-out infinite;
+}

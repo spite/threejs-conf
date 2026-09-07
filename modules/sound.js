@@ -172,8 +172,13 @@ function createSound({ camera, group, letters, physics, params }) {
     cursorSpeed = velocity.length();
   }
 
+  function audioBlocked() {
+    return !audio.ctx || audio.ctx.state !== "running";
+  }
+
   return {
     audio,
+    blocked: audioBlocked,
     start: startAudio,
     update: updateAudio,
     playContacts,

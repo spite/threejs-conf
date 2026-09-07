@@ -29,6 +29,8 @@ const defaults = {
   clusterRadius: 0.25,
   clusterSettle: 0.3,
   hoverStrength: 0.08,
+  tilt: 0.6,
+  tiltShake: 1,
   hoverRadius: 0.5,
   holdPull: 18,
   holdRadius: 0.5,

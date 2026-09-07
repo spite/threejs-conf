@@ -38,6 +38,7 @@ import { loadFont } from "modules/GlyphSDF.js";
 import { SSAO } from "modules/SSAO.js";
 import { Physics } from "modules/Physics.js";
 import { createSound } from "modules/sound.js";
+import { createTilt } from "modules/tilt.js";
 import { createLetters } from "modules/letters.js";
 import { makeGlowMaterial } from "modules/letterMaterial.js";
 import { PhysicsDebug } from "modules/PhysicsDebug.js";
@@ -252,6 +253,11 @@ const shadowCenter = new Vector3();
 const pointerScenePoint = new Vector3();
 const pullPoint = new Vector3();
 
+const TILT_GRAVITY = 4;
+const tilt = createTilt();
+const tiltVec = { x: 0, y: 0 };
+const tiltGravity = new Vector3();
+const cameraUp = new Vector3();
 const MAX_CLICK_CHARGE = 4;
 let clickCharge = 0;
 
@@ -307,6 +313,16 @@ controls.target.set(0, 0, 0);
 controls.update();
 
 let assetsReady = false;
+const audioHint = document.querySelector("#audio-hint");
+let audioHintShown = null;
+
+function updateAudioHint() {
+  if (!audioHint) return;
+  const blocked = params.sound() && sound.blocked();
+  if (blocked === audioHintShown) return;
+  audioHintShown = blocked;
+  audioHint.classList.toggle("visible", blocked);
+}
 
 function hideLoading() {
   const el = document.querySelector("#loading");
@@ -376,8 +392,8 @@ let pointerDown = false;
 let idleTime = 0;
 let attracting = false;
 let burstTimer = 0;
-const attractPoint = new Vector3();
-const attractDir = new Vector3();
+const burstPoint = new Vector3();
+const burstDir = new Vector3();
 
 function wake() {
   idleTime = 0;
@@ -387,13 +403,13 @@ function wake() {
 function attractBurst() {
   if (!letters.length) return;
   const letter = letters[Math.floor(Math.random() * letters.length)];
-  attractPoint.copy(letter.position);
-  attractDir
+  burstPoint.copy(letter.position);
+  burstDir
     .set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)
     .normalize();
   physics.burst(
-    attractPoint,
-    attractDir,
+    burstPoint,
+    burstDir,
     params.clickStrength() * 0.6,
     params.clickRadius(),
     params.falloff(),
@@ -467,6 +483,7 @@ window.addEventListener("pointermove", (e) => {
 window.addEventListener("pointerdown", (e) => {
   wake();
   sound.start();
+  if (params.tilt() > 0) tilt.request();
 
   pointerOnUI = !fromScene(e);
   if (pointerOnUI) {
@@ -533,6 +550,53 @@ window.addEventListener("pointercancel", () => {
   pointerOnUI = false;
   pointerDown = false;
 });
+
+function applyTilt(dt) {
+  const strength = params.tilt();
+  if (strength <= 0 || !tilt.active) {
+    physics.setGravity(0, 0, 0);
+    return;
+  }
+
+  tilt.update(dt);
+
+  const shake = tilt.takeShake();
+  if (shake > 0) {
+    wake();
+    if (running && params.physics() && params.tiltShake() > 0) {
+      burstPoint.set(0, 0, 0);
+      burstDir
+        .set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)
+        .normalize();
+      physics.burst(
+        burstPoint,
+        burstDir,
+        params.clickStrength() * params.tiltShake() * Math.min(shake, 3),
+        params.clickRadius(),
+        params.falloff(),
+        params.clickSpin(),
+      );
+      pulseVelocity += 12;
+    }
+  }
+
+  if (!tilt.read(tiltVec)) {
+    physics.setGravity(0, 0, 0);
+    return;
+  }
+
+  if (tiltVec.x !== 0 || tiltVec.y !== 0) wake();
+
+  cameraRight.setFromMatrixColumn(camera.matrixWorld, 0);
+  cameraUp.setFromMatrixColumn(camera.matrixWorld, 1);
+  tiltGravity
+    .copy(cameraRight)
+    .multiplyScalar(tiltVec.x)
+    .addScaledVector(cameraUp, tiltVec.y)
+    .multiplyScalar(strength * TILT_GRAVITY);
+
+  physics.setGravity(tiltGravity.x, tiltGravity.y, tiltGravity.z);
+}
 
 function applyHover(dt) {
   if (!pointerWorld()) return;
@@ -769,6 +833,7 @@ render(() => {
   }
 
   stepAttract(dt);
+  applyTilt(dt);
   stepPhysics(dt);
 
   sampleStats();
@@ -818,6 +883,8 @@ render(() => {
     assetsReady = false;
     hideLoading();
   }
+
+  updateAudioHint();
 
   statTriangles.sample(renderer.info.render.triangles);
   statCalls.sample(renderer.info.render.calls);

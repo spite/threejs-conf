@@ -368,6 +368,13 @@ function buildPanel(gui, params, actions, stats) {
   gui.addSlider("Buildup Decay", params.buildupDecay, 0.2, 6, 0.05,
     { title: "How long the extra force lingers, in seconds. Higher keeps it around longer; the build-up tops out at four clicks either way." },
   );
+  gui.addSection("Device Tilt", { open: false });
+  gui.addSlider("Tilt", params.tilt, 0, 2, 0.05,
+    { title: "On a phone, tilting pulls the letters toward whichever edge you lower, like tipping a tray. They slide back when you level it. 0 turns it off, and it does nothing on a machine with no motion sensor." },
+  );
+  gui.addSlider("Shake Throw", params.tiltShake, 0, 2, 0.05,
+    { title: "How hard a sharp shake of the phone throws the letters. 0 turns it off." },
+  );
   gui.addSection("Clustering", { open: false });
   gui.addSlider("Cluster Pull", params.cluster, 0, 5, 0.01,
     { title: "How much flying letters bunch together in the middle." },
