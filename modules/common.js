@@ -3,7 +3,6 @@ import {
   PerspectiveCamera,
   OrthographicCamera,
   SRGBColorSpace,
-  ACESFilmicToneMapping,
   Clock,
 } from "three";
 import { OrbitControls } from "third_party/OrbitControls.js";
@@ -29,8 +28,6 @@ function getWebGLRenderer() {
   });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
   renderer.outputColorSpace = SRGBColorSpace;
-  renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
 
   document.body.appendChild(renderer.domElement);
   return renderer;

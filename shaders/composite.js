@@ -68,20 +68,12 @@ const vec2 POISSON[12] = vec2[12](
   vec2(0.896, 0.412), vec2(-0.322, -0.933), vec2(-0.792, -0.598)
 );
 
-vec3 toLinear(vec3 c) {
-  return mix(
-    pow((c + 0.055) / 1.055, vec3(2.4)),
-    c / 12.92,
-    vec3(lessThanEqual(c, vec3(0.04045)))
-  );
-}
-
 vec3 backgroundAt(vec2 uv) {
   vec4 ray = cameraProjectionInverse * vec4(uv * 2.0 - 1.0, -1.0, 1.0);
   vec3 dir = normalize(mat3(viewMatrixInverse) * (ray.xyz / ray.w));
   return mix(
-    toLinear(backgroundGround),
-    toLinear(backgroundSky),
+    backgroundGround,
+    backgroundSky,
     dir.y * 0.5 + 0.5
   );
 }

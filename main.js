@@ -796,7 +796,7 @@ function updateSceneAndPost(dt) {
   ao.backgroundGround.value.copy(groundColor);
   setMaxPixelRatio(params.pixelRatio());
   ao.fogDensity.value = params.fogDensity();
-  ao.radius.value = params.aoRadius();
+  ao.radius.value = params.aoRadius() * renderer.getPixelRatio();
   ao.strength.value = params.aoStrength();
   ao.bias.value = params.aoBias();
   ao.shadowStrength.value = params.shadowStrength();
@@ -845,7 +845,7 @@ render(() => {
   skyColor.set(params.skyColor());
   groundColor.set(params.groundColor());
   background.copy(groundColor).lerp(skyColor, 0.5);
-  bgLight.copy(background).convertSRGBToLinear();
+  bgLight.copy(background);
 
   text.updateMaterials(hue);
 
@@ -898,4 +898,9 @@ render(() => {
       letter.matrixWorld,
     );
   }
+
+  cursorBall.material.uniforms.previousModelViewMatrix.value.multiplyMatrices(
+    camera.matrixWorldInverse,
+    cursorBall.matrixWorld,
+  );
 });

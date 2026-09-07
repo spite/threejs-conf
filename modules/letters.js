@@ -109,7 +109,6 @@ function createLetters(ctx) {
         letter.matrixWorld,
       );
       letter.material.syncLights(lights);
-      letter.material.syncRenderer(renderer);
       if (envMap) letter.material.envMap = envMap;
       group.add(letter);
       letters.push(letter);

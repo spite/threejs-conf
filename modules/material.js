@@ -37,16 +37,8 @@ async function loadEnvMap(file, renderer) {
 
 const light = new DirectionalLight(0xffffff, 3);
 light.position.set(3, 6, 3);
-light.castShadow = true;
-light.shadow.camera.top = 3;
-light.shadow.camera.bottom = -3;
-light.shadow.camera.right = 3;
-light.shadow.camera.left = -3;
-light.shadow.mapSize.set(4096, 4096);
 
 const hemiLight = new HemisphereLight(0xffffff, 0xffffff, 2);
-hemiLight.color.setHSL(0.6, 1, 0.6);
-hemiLight.groundColor.setHSL(0.095, 1, 0.75);
 hemiLight.position.set(0, 50, 0);
 
 const sceneLights = {
@@ -83,7 +75,6 @@ class Material extends RawShaderMaterial {
         color: { value: params.uniforms.color },
         roughness: { value: params.uniforms.roughness },
         metalness: { value: params.uniforms.metalness },
-        toneMappingExposure: { value: 1.0 },
         previousModelViewMatrix: { value: new Matrix4() },
         sssColor: { value: new Color(0xff9a6b) },
         sssStrength: { value: 0 },
@@ -228,10 +219,6 @@ class Material extends RawShaderMaterial {
       slot.decay = light.decay;
     }
     this.uniforms.numPointLights.value = lights.length;
-  }
-
-  syncRenderer(renderer) {
-    this.uniforms.toneMappingExposure.value = renderer.toneMappingExposure;
   }
 }
 

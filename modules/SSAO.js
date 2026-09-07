@@ -136,7 +136,6 @@ class SSAO {
         pointShadowRays: { value: 4 },
         blueNoise: { value: blueNoiseTexture },
         blueNoiseSize: { value: BLUE_NOISE_SIZE },
-        toneMappingExposure: { value: 1 },
       },
       vertexShader: orthoVs,
       fragmentShader: ssaoFs,
@@ -253,7 +252,7 @@ class SSAO {
     this.aberrationPass.setSize(w, h);
     this.blurPass.setSize(w, h);
     this.fxaaPass.setSize(w, h);
-    this.bloom.setSize(w, h);
+    this.bloom.setSize(Math.round(width), Math.round(height));
     this.aberrationShader.uniforms.inputTexture.value = this.pass.texture;
     this.fxaaShader.uniforms.inputTexture.value = this.blurPass.texture;
     this.aberrationShader.uniforms.resolution.value.set(width, height);

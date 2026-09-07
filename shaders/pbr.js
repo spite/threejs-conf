@@ -32,7 +32,6 @@ uniform bool hasNormalMap;
 uniform sampler2D normalMap;
 uniform vec2 normalScale;
 
-uniform float toneMappingExposure; // Added exposure uniform
 
 #define MAX_DIR_LIGHTS ${MAX_DIR_LIGHTS}
 #define MAX_HEMI_LIGHTS ${MAX_HEMI_LIGHTS}
@@ -78,39 +77,6 @@ layout(location = 2) out vec4 fragNormal;
 layout(location = 3) out vec4 fragVelocity;
 layout(location = 4) out vec4 fragPointLight;
 
-// --- Three.js Standard ACES Implementation ---
-vec3 RRTAndODTFit( vec3 v ) {
-    vec3 a = v * ( v + 0.0245786 ) - 0.000090537;
-    vec3 b = v * ( 0.983729 * v + 0.4329510 ) + 0.238081;
-    return a / b;
-}
-
-vec3 ACESFilmicToneMapping( vec3 color ) {
-    const mat3 ACESInputMat = mat3(
-        0.59719, 0.07600, 0.02840,
-        0.35458, 0.90834, 0.13383,
-        0.04823, 0.01566, 0.83777
-    );
-    const mat3 ACESOutputMat = mat3(
-        1.60475, -0.10208, -0.00327,
-        -0.53108,  1.10813, -0.07276,
-        -0.07367, -0.00605,  1.07602
-    );
-
-    // Three.js exposure correction factor
-    color *= toneMappingExposure / 0.6;
-
-    color = ACESInputMat * color;
-    color = RRTAndODTFit( color );
-    color = ACESOutputMat * color;
-
-    return saturate( color );
-}
-
-vec4 linearToSRGB( in vec4 value ) {
-    return vec4( mix( pow( value.rgb, vec3( 0.41666 ) ) * 1.055 - vec3( 0.055 ), value.rgb * 12.92, vec3( lessThanEqual( value.rgb, vec3( 0.0031308 ) ) ) ), value.a );
-}
-
 float getDistanceAttenuation(float lightDistance, float cutoffDistance, float decayExponent) {
     float distanceFalloff = 1.0 / max(pow(lightDistance, decayExponent), 0.01);
     if (cutoffDistance > 0.0) {
@@ -122,9 +88,6 @@ float getDistanceAttenuation(float lightDistance, float cutoffDistance, float de
 
 vec3 F_Schlick(float u, vec3 f0) { return f0 + (vec3(1.0) - f0) * pow(1.0 - u, 5.0); }
 
-vec3 F_SchlickRoughness(float u, vec3 f0, float roughness) {
-    return f0 + (max(vec3(1.0 - roughness), f0) - f0) * pow(1.0 - u, 5.0);
-}
 
 float D_GGX(float NdotH, float alpha) {
     float a2 = alpha * alpha;
