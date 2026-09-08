@@ -2,12 +2,14 @@
 
 A physics toy for THREE.JS CONF 2026.
 
+**[Try it →](https://spite.github.io/threejs-conf/)**
+
 The title is built as real geometry rather than drawn as text: each letter is pulled out of a
 TrueType font, turned into a solid mesh, and handed to a physics engine. You can shove the
 letters around with the mouse, gather them onto a light, and throw them. They knock into each
 other, they make noise, and they drift back into place when you leave them alone.
 
-![screenshot](assets/snapshot.jpg)
+[![screenshot](assets/snapshot.jpg)](https://spite.github.io/threejs-conf/)
 
 ## The pieces
 
