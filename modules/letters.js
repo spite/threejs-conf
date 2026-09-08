@@ -23,6 +23,7 @@ function createLetters(ctx) {
   const letters = [];
   const letterTextures = [];
   let massBlendApplied = -1;
+  let builtDepth = 0;
   const massBuffer = [];
 
   function disposeLetter(letter) {
@@ -66,12 +67,13 @@ function createLetters(ctx) {
     rebuild();
 
     const t = performance.now();
+    builtDepth = params.depth.peek();
     const built = buildTextGeometry(
       font,
       [params.line1.peek(), params.line2.peek()],
       {
         capHeight: params.capHeight.peek(),
-        depth: params.depth.peek(),
+        depth: builtDepth,
         round: params.round.peek(),
         edge: params.edge.peek(),
         curveSteps: Math.round(params.curveSteps.peek()),
@@ -271,6 +273,9 @@ function createLetters(ctx) {
 
   return {
     letters,
+    get depth() {
+      return builtDepth;
+    },
     updateMaterials: updateLetterMaterials,
     syncMasses,
     setEnvMap,

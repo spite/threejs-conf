@@ -789,7 +789,7 @@ function updateSceneAndPost(dt) {
   ao.pointShadowSteps.value = Math.round(params.cursorShadowSteps());
   ao.pointShadowThickness.value =
     params.cursorShadowThickness() *
-    Math.max(params.depth() * (group.scale.x || 1), 0.05);
+    Math.max(text.depth * (group.scale.x || 1), 0.05);
   ao.pointShadowSoftness.value = params.cursorShadowSoftness();
   ao.pointShadowRays.value = Math.round(params.cursorShadowRays());
   ao.backgroundSky.value.copy(skyColor);

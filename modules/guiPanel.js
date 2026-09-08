@@ -171,8 +171,8 @@ function buildPanel(gui, params, actions, stats) {
   gui.addSlider("Texture Scale", params.texScale, 0.25, 8, 0.05,
     { title: "How big the pattern appears on the letters. Higher makes it smaller and busier." },
   );
-  gui.addSlider("Blend Sharpness", params.blendSharpness, 1, 32, 1,
-    { title: "How crisply the pattern wraps around corners. Low is soft and smeared, high is sharp." },
+  gui.addSlider("Blend Sharpness", params.blendSharpness, 1, 8, 0.1,
+    { title: "How crisply the stamp pattern commits to one direction where a letter curves. Low smears it across the rounded edges and side walls; the flat faces look the same either way. Above about 6 nothing more changes." },
   );
   gui.addSlider("Normal Strength", params.normalStrength, -1, 1, 0.01,
     { title: "How raised the pattern feels. 0 is flat, and negative values push the pattern in instead of out." },

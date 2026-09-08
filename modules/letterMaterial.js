@@ -32,7 +32,7 @@ function makeLetterMaterial(camera, color = 0xffffff) {
     customUniforms: {
       viewMatrixInverse: { value: new Matrix3() },
       texScale: { value: 1 },
-      blendSharpness: { value: 16 },
+      blendSharpness: { value: 4 },
       cameraNear: { value: camera.near },
       cameraFar: { value: camera.far },
       rimColor: { value: new Color(0x000000) },

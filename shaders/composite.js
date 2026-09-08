@@ -249,7 +249,8 @@ void main() {
   vec2 inc = 1.0 / vec2(textureSize(colorMap, 0));
   vec3 position = posDepth.xyz;
   vec3 normal = normalize(texture(normalMap, vUv).xyz);
-  vec2 randVec = normalize(vec2(random(vUv, 1.0), random(vUv.yx, 1.0)));
+  float aoAngle = blueNoiseAt(gl_FragCoord.xy + vec2(23.0, 29.0)).x * 6.2831853;
+  vec2 randVec = vec2(cos(aoAngle), sin(aoAngle));
 
   float kRadius = radius * (1.0 - abs(posDepth.w));
 
